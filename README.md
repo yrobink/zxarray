@@ -6,7 +6,7 @@ zxarray is an interface of zarr similar to xarray.  The idea is to benefit from
 the advantages of xarray (coordinate access, parallel apply), while keeping
 memory usage low by storing data in zarr. To achieve this:
 - zxarray.ZXArray have accessors similar to those of xarray, such as `.loc`,
-  `.selù, `.isel`.
+  `.sel`, `.isel`.
 - an `apply_ufunc` function calling the xarray function enables parallel
   calculation via dask.
 

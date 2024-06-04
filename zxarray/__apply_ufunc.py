@@ -20,7 +20,6 @@
 ## Imports ##
 #############
 
-import logging
 import itertools as itt
 import psutil
 
@@ -28,14 +27,6 @@ import numpy  as np
 import xarray as xr
 
 from .__DMUnit import DMUnit
-
-
-######################
-## Define a logger  ##
-######################
-
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
 
 
 ###############
@@ -145,7 +136,6 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 			max_mem = DMUnit( s = max_mem )
 		elif not isinstance( max_mem , tuple([str,DMUnit]) ):
 			raise ValueError( "'max_mem' argument class must be a string or zxarray.DMUnit" )
-		logger.info( f"Memory available: {max_mem}" )
 		
 		## function_block_memory
 		if fb_mem is None:
@@ -177,8 +167,6 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 			ssizes[i]  = np.inf
 		mem_need = fb_mem(bsizes)
 		
-		logger.info( f"Maximal memory needed: {mem_need}" )
-		logger.info( f"Block sizes: {bsizes}" )
 		if mem_need > max_mem:
 			raise MemoryError( f"Insufficient memory, maximal memory lower than memory needed: max_mem = {max_mem} < {mem_need} = mem_need" )
 	
