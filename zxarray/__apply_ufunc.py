@@ -179,6 +179,11 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 		if mem_need > max_mem:
 			raise MemoryError( f"Insufficient memory, maximal memory lower than memory needed: max_mem = {max_mem} < {mem_need} = mem_need" )
 	
+	## Find dimensions of chunks
+	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+	if not len(chunks) == len(args):
+		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
+	
 	## Loop on blocks
 	for bx in itt.product(*[range(0,c.size,b) for c,b in zip(bcoords,bsizes)]):
 		
@@ -186,7 +191,7 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 		bidx = { bdims[i] : slice(bx[i],bx[i]+bsizes[i],1) for i in range(len(bsizes)) }
 		
 		## Extract array
-		xargs = [ Z.isel( **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } ) for Z in args ]
+		xargs = [ Z.isel( **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
 		
 		## Apply
 		res = xr.apply_ufunc( func , *xargs , **dask_kwargs )

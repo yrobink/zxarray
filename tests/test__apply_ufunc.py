@@ -144,7 +144,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		## Set parameters
 		input_core_dims    = [["sample","time"] for _ in range(len(xdata))]
 		output_core_dims   = [["array","stats"]]
-		output_dtypes      = [float for _ in range(ndata)]
+		output_dtypes      = [float]
 		vectorize          = False
 		dask               = "parallelized"
 		output_coords      = { "stats" : ["m","s","n","x"] , "array" : range(ndata) }
@@ -183,7 +183,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		vectorize          = False
 		dask               = "parallelized"
 		output_coords      = [{ "stats" : ["m","s","n","x"] , "array" : range(ndata) } , { "quantile" : ["Q10","Q30","Q70","Q90"] , "array" : range(ndata) }, { "ufunc" : ["exp","cos","sin","abs"] , "array" : range(ndata) }]
-		output_sizes       = { "stats" : 4 , "array" : ndata }
+		output_sizes       = { "stats" : 4 , "array" : ndata , "quantile" : 4 , "ufunc" : 4 }
 		dask_gufunc_kwargs = { "output_sizes" : output_sizes }
 		transpose          = [["stats","array","y","x"],["quantile","array","y","x"],["ufunc","array","y","x"]]
 		dask_kwargs        = { "input_core_dims" : input_core_dims , "output_core_dims" : output_core_dims , "output_dtypes" : output_dtypes , "vectorize" : vectorize , "dask" : dask , "dask_gufunc_kwargs" : dask_gufunc_kwargs }
