@@ -39,7 +39,7 @@ from zxarray.__ZXArray import ZXArrayCoords
 ###############
 
 def build_coords():##{{{
-	sample = [ "S{:{fill}{align}{n}}".format( s , fill = "0" , align = ">" , n = 3 ) for s in range(100) ]
+	sample = [ "S{:{fill}{align}{n}}".format( s , fill = "0" , align = ">" , n = 2 ) for s in range(10) ]
 	time   = xr.date_range("2000-01-01","2003-12-31").values
 	time   = xr.DataArray( time , dims = ["time"] , coords = [time] )
 	y      = np.linspace( -90 , 90 , 15 )
@@ -53,7 +53,7 @@ def build_coords():##{{{
 	lcoords = coords
 	dcoords = { d : c for d,c in zip(dims,coords) }
 	
-	return dims,lcoords,dcoords
+	return dims,lcoords,dcoords,shape
 ##}}}
 
 
@@ -64,14 +64,14 @@ def build_coords():##{{{
 class Test__ZXArrayCoords(unittest.TestCase):##{{{
 	
 	def test__init__( self ):##{{{
-		dims,lcoords,dcoords = build_coords()
+		dims,lcoords,dcoords,_ = build_coords()
 		
 		self.assertRaises( ValueError , ZXArrayCoords , coords = lcoords , dims = dims[:2] )
 		self.assertRaises( ValueError , ZXArrayCoords , coords = lcoords , dims = None )
 	##}}}
 	
 	def test__getitem__(self):##{{{
-		dims,lcoords,dcoords = build_coords()
+		dims,lcoords,dcoords,_ = build_coords()
 		c = ZXArrayCoords( coords = dcoords )
 		
 		self.assertRaises( ValueError , c.__getitem__ , "K" )
@@ -80,7 +80,151 @@ class Test__ZXArrayCoords(unittest.TestCase):##{{{
 ##}}}
 
 class Test__ZXArray(unittest.TestCase):##{{{
-	pass
+	
+	def test__init__(self):##{{{
+		
+		dims,_,coords,shape = build_coords()
+		
+		## Initialization with nan value
+		zX = zr.ZXArray( np.nan , dims = dims , coords = coords )
+		self.assertTrue( np.isnan(zX.dataarray).all() )
+		
+		## Initialization with a 0 value
+		zX = zr.ZXArray( 0. , dims = dims , coords = coords )
+		self.assertTrue( (np.abs(zX.dataarray) < 1e-6 ).all() )
+		
+		## Incoherent data
+		self.assertRaises( ValueError , zr.ZXArray , data = 0. , dims = dims[:2] , coords = coords )
+	##}}}
+	
+	def test__from_xarray(self):##{{{
+		
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		self.assertTrue( ( np.abs( xX - zX.dataarray ) < 1e-6 ).all() )
+		
+	##}}}
+	
+	def test__copy(self):##{{{
+		
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		zY = zX.copy()
+		self.assertTrue( ( np.abs( zY.dataarray - zX.dataarray ) < 1e-6 ).all() )
+		
+	##}}}
+	
+	def test__sel(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		scoords = { "time" : "2002" }
+		
+		sxX = xX.sel( **scoords )
+		szX = zX.sel( **scoords )
+		
+		self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__zsel(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		scoords = { "time" : "2002" }
+		
+		sxX = xX.sel( **scoords )
+		szX = zX.zsel( **scoords )
+		
+		self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__isel(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		sicoords = { "time" : np.arange(0,100,2,dtype = int) }
+		
+		sxX = xX.isel( **sicoords )
+		szX = zX.isel( **sicoords )
+		
+		self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__zisel(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		sicoords = { "time" : np.arange(0,100,2,dtype = int) }
+		
+		sxX = xX.isel( **sicoords )
+		szX = zX.zisel( **sicoords )
+		
+		self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__loc(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		sxX = xX.loc[:,"2002",:,:]
+		szX = zX.loc[:,"2002",:,:]
+		
+		self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__zloc(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		sxX = xX.loc[:,"2002",:,:]
+		szX = zX.zloc[:,"2002",:,:]
+		
+		self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+	##}}}
+	
+	def test__getitem__(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		
+		for d in zX.dims:
+			self.assertTrue( (zX["time"] == zX.coords["time"]).all() )
+		
+		self.assertTrue( ( np.abs( zX[0,:,:,:,"x"] -xX[0,:,:,:] ) < 1e-6 ).all() )
+		self.assertTrue( ( np.abs( zX[0,:,:,:,"z"].dataarray -xX[0,:,:,:] ) < 1e-6 ).all() )
+		
+	##}}}
+	
+	def test__setitem__(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		xY = xr.DataArray( np.random.uniform( size = shape ) , dims = dims , coords = coords )
+		
+		zX[0,:,:,:] = xY[0,:,:,:]
+		
+		self.assertTrue( ( np.abs( zX[0,:,:,:,"x"] - xY[0,:,:,:] ) < 1e-6 ).all() )
+		
+	##}}}
+	
 ##}}}
 
 

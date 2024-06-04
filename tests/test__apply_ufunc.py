@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3 -m unittest
 
 ## Copyright(c) 2024 Yoann Robin

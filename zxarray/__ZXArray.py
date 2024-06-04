@@ -204,6 +204,14 @@ class ZXArrayAttributes:
 ## Locators
 
 class ZXArrayLocator:##{{{
+	"""
+	zxarray.ZXArrayLocator
+	======================
+	Class to manage the '.loc' method of ZXArray. Return the data selected
+	by coordinates (not the index) given to the locator. Data returned are
+	a xarray.DataArray class, so the data are back to the memory.
+	"""
+	
 	def __init__( self , zxarr ):
 		self._zxarr = zxarr
 	
@@ -226,6 +234,13 @@ class ZXArrayLocator:##{{{
 ##}}}
 
 class ZXArrayZLocator:##{{{
+	"""
+	zxarray.ZXArrayZLocator
+	=======================
+	Class to manage the '.zloc' method of ZXArray. Return the data selected
+	by coordinates (not the index) given to the locator. Data returned are
+	a zxarray.ZXArray class, so the data are only on the disk.
+	"""
 	def __init__( self , zxarr ):
 		self._zxarr = zxarr
 	
@@ -233,7 +248,7 @@ class ZXArrayZLocator:##{{{
 		if not len(args) == self._zxarr.ndim:
 			raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
 		sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
-		return self._zxarr.sel(**sel)
+		return self._zxarr.zsel(**sel)
 	
 	def __setitem__( self , args , data ):
 		if not len(args) == self._zxarr.ndim:
@@ -251,10 +266,49 @@ class ZXArrayZLocator:##{{{
 ## Main class
 
 class ZXArray:##{{{
+	"""
+	zxarray.ZXArray
+	===============
+	Main class similar to xarray.DataArray, BUT:
+	- data are stored in a zarr file, so no memory are used (except the memory
+	  used by coordinates)
+	- The classic accessors of (.loc, .sel, .isel) xarray.DataArray can be
+	  used, and data are returned as a xarray.DataArray (so data are go back to
+	  the memory)
+	- New accessors which mimics the xarray.DataArray accessors can be used:
+	  .zloc, .zsel, .zisel. Data are returned as a zxarray.ZXArray, and no
+	  memory are used.
+	"""
 	
 	## I/O ##{{{
 	
 	def __init__( self , data = None , dims = None , coords = None , zfile = None , dtype = "float32" , zarr_kwargs = {} ): ##{{{
+		"""
+		zxarray.ZXArray.__init__
+		========================
+		Init a zxarray.ZXArray.
+		
+		Arguments
+		---------
+		data: scalar | array_like
+			Data to initialize
+		dims: tuple
+			Dimensions names. If not given, 'coords' must be a dict where the
+			key will be the dimensions
+		coords: list | dict
+			Coordinates. Can be a list only if 'dims' is given.
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		dtype: data_type
+			Data type
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
 		
 		## Internal attributes
 		self._internal = ZXArrayAttributes()
@@ -282,11 +336,47 @@ class ZXArray:##{{{
 	
 	## static.from_xarray ## {{{
 	@staticmethod
-	def from_xarray( data , zfile = None , zarr_kwargs = {} ):
-		raise NotImplementedError
+	def from_xarray( xX : xr.DataArray , zfile : str | None = None , zarr_kwargs : dict = {} ):
+		"""
+		zxarray.ZXArray@static.from_xarray
+		==================================
+		Init a zxarray.ZXArray from a xarray.DataArray.
+		
+		Arguments
+		---------
+		xX: xarray.DataArray
+			The array to transform
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
+		return ZXArray( data = xX.values , dims = tuple(xX.dims) , coords = { d : xX[d] for d in xX.dims } , zfile = zfile , dtype = xX.dtype , zarr_kwargs = zarr_kwargs )
 	##}}}
 	
 	def copy( self , zfile = None , zarr_kwargs = {} ): ##{{{
+		"""
+		zxarray.ZXArray.copy
+		====================
+		Return a copy of the current zxarray.ZXArray.
+		
+		Arguments
+		---------
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
 		return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d] for d in self.dims } )
 	##}}}
 	
@@ -305,34 +395,58 @@ class ZXArray:##{{{
 	
 	@property
 	def dims(self):
+		"""
+		Return a tuple of dimensions.
+		"""
 		return self._internal.coords.dims
 	
 	@property
 	def coords(self):
+		"""
+		Return a dict of coordinates.
+		"""
 		return self._internal.coords
 	
 	@property
 	def shape(self):
+		"""
+		Return a tuple of shape.
+		"""
 		return self._internal.zdata.shape
 	
 	@property
 	def size(self):
+		"""
+		Return the size.
+		"""
 		return self._internal.zdata.size
 	
 	@property
 	def ndim(self):
+		"""
+		Return the number of dimension.
+		"""
 		return self._internal.zdata.ndim
 	
 	@property
 	def dtype(self):
+		"""
+		Return the datatype.
+		"""
 		return self._internal.zdata.dtype
 	
 	@property
 	def zinfo(self):
+		"""
+		Return the zarr informations.
+		"""
 		return self._internal.zdata.info
 	
 	@property
 	def path(self):
+		"""
+		Return the path of the zarr storage.
+		"""
 		return self._internal.zdata.store.path
 	
 	##}}}
@@ -340,6 +454,21 @@ class ZXArray:##{{{
 	## Data accessors ## {{{
 	
 	def sel( self , **kwargs ):##{{{
+		"""
+		zxarray.ZXArray.sel
+		===================
+		Return a xarray.DataArray defined by the keyword coordinates. Note that
+		the data of the return are going back to the memory.
+		
+		Arguments
+		---------
+		kwargs: dict
+			mapping { dim : sub-coord } of a coordinates.
+		
+		Returns
+		-------
+		xX: xarray.DataArray
+		"""
 		
 		index,dims,coords = self._internal.coords.coords_to_index(**kwargs)
 		
@@ -347,6 +476,26 @@ class ZXArray:##{{{
 	##}}}
 	
 	def zsel( self , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+		"""
+		zxarray.ZXArray.zsel
+		====================
+		Return a zxarray.ZXArray defined by the keyword coordinates. Note that
+		the data stay in a zarr file.
+		
+		Arguments
+		---------
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		kwargs: dict
+			mapping { dim : sub-coord } of a coordinates.
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
 		
 		index,dims,coords = self._internal.coords.coords_to_index(**kwargs)
 		xzarr = ZXArray( dims = dims , coords = coords , zfile = zfile , dtype = self.dtype , zarr_kwargs = zarr_kwargs )
@@ -356,33 +505,112 @@ class ZXArray:##{{{
 	##}}}
 	
 	def isel( self , **kwargs ):##{{{
+		"""
+		zxarray.ZXArray.isel
+		====================
+		Return a xarray.DataArray defined by the keyword indexes. Note that
+		the data of the return are going back to the memory.
+		
+		Arguments
+		---------
+		kwargs: dict
+			mapping { dim : sub-index } of index. Integer or slices are allowed.
+		
+		Returns
+		-------
+		xX: xarray.DataArray
+		"""
 		return self.sel( **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
 	##}}}
 	
 	def zisel( self , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+		"""
+		zxarray.ZXArray.zisel
+		=====================
+		Return a zxarray.ZXArray defined by the index coordinates. Note that
+		the data stay in a zarr file.
+		
+		Arguments
+		---------
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		kwargs: dict
+			mapping { dim : sub-index } of index. Integer or slices are allowed.
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
 		return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
 	##}}}
 	
 	## property.loc ##{{{
 	@property
 	def loc(self):
+		"""
+		zxarray.ZXArray.loc
+		===================
+		Return a locator smimilar to xarray.DataArray.loc
+		
+		Returns
+		-------
+		loc: zxarray.__ZXArray.ZXArrayLocator
+		"""
 		return ZXArrayLocator(self)
 	##}}}
 	
 	## property.zloc ##{{{
 	@property
 	def zloc(self):
+		"""
+		zxarray.ZXArray.zloc
+		====================
+		Return a locator smimilar to xarray.DataArray.loc
+		
+		Returns
+		-------
+		loc: zxarray.__ZXArray.ZXArrayZLocator
+		"""
 		return ZXArrayZLocator(self)
 	##}}}
 	
 	## property.datarray ##{{{
 	@property
 	def dataarray( self ):
+		"""
+		zxarray.ZXArray.dataarray
+		=========================
+		Return all the data as a datarray. All data are going back to the memory
+		
+		Returns
+		-------
+		xarray.DataArray
+		"""
 		idx = [slice(None) for _ in range(self.ndim)]
 		return self.loc[idx]
 	##}}}
 	
 	def __getitem__( self , *args ): ##{{{
+		"""
+		zxarray.ZXArray.__getitem__
+		===========================
+		If args is a single string, return the coordinates of the dimension.
+		Else 'args' must be a list of index, and the method '.isel' is called.
+		
+		Arguments
+		---------
+		args: str | tuple[index]
+			a single string, or index of corresponding to coordinates. If index
+			is given, the last value of args can be 'x' or 'z' to return a
+			xarray.DataArray or a zxarray.ZXArray
+		
+		Returns
+		-------
+		xarray.DataArray
+		"""
 		
 		## Ask a coordinate
 		if isinstance(args[0],str):
@@ -403,14 +631,36 @@ class ZXArray:##{{{
 		if not len(index) == self.ndim:
 			raise ValueError( f"Invalid number of dimension {len(index)} != {self.ndim}" )
 		
+		## output coords
+		ocoords = {}
+		for d,i in zip(self.dims,index):
+			if isinstance(i,int):
+				ocoords[d] = np.array( [i] , dtype = int )
+			else:
+				ocoords[d] = i
+		
 		## In fact just a call to the zisel / isel method
 		if mode == "z":
-			return self.zisel( **{ d : i for d,i in zip(self.dims,index) } )
+			return self.zisel(**ocoords)
 		
-		return self.isel( **{ d : i for d,i in zip(self.dims,index) } )
+		return self.isel(**ocoords)
 	##}}}
 	
 	def __setitem__( self , args , data ): ##{{{
+		"""
+		zxarray.ZXArray.__setitem__
+		===========================
+		'args' must be a list of index, and 'data' is used to update the dataset
+		
+		Arguments
+		---------
+		args: str | tuple[index]
+			a single string, or index of corresponding to coordinates.
+		data: array_like
+		
+		Returns
+		-------
+		"""
 		data = np.asarray( data , dtype = self.dtype )
 		if data.ndim == 0:
 			self._internal.zdata.set_orthogonal_selection( args , data )
@@ -419,6 +669,50 @@ class ZXArray:##{{{
 	##}}}
 	
 	## }}}
+	
+	## Stats ##{{{
+	
+	def _ufunc( self , func , dims = None , **kwargs ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def sum( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def prod( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def mean( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def median( self , dims = None , **kwargs ):##{{{
+		return self.quantile( 0.5 , dims = dims , method = method )
+	##}}}
+	
+	def std( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def min( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def max( self , dims = None ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def quantile( self , p , dims = None , **kwargs ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	def abs( self ):##{{{
+		raise NotImplementedError
+	##}}}
+	
+	##}}}
 	
 ##}}}
 
