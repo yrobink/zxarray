@@ -28,7 +28,6 @@ import numpy  as np
 import xarray as xr
 
 from .__DMUnit import DMUnit
-from .__ZXArray import ZXArray
 
 
 ######################
@@ -53,7 +52,7 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 					output_zfile : list | tuple | None = None ,
 					output_dtypes : list | None = None ,
 					dask_kwargs : dict = {} ,
-					zarr_kwargs : dict = {} ) -> ZXArray | tuple[ZXArray]:
+					zarr_kwargs : dict = {} ):
 	"""
 	zxarray.apply_ufunc
 	===================
@@ -101,6 +100,10 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 	zX: zxarray.ZXArray | tuple[zxarray.ZXArray]
 		The result of the computation.
 	"""
+	
+	## ZXArray class, to remove the import
+	ZXArray = type(args[0])
+	
 	## Check output coordinates
 	output_coords = list(output_coords)
 	n_out = len(output_coords)
