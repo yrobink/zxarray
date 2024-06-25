@@ -365,7 +365,7 @@ class ZXArray:##{{{
 	
 	## static.from_ncfiles ## {{{
 	@staticmethod
-	def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ):
+	def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ):
 		"""
 		zxarray.ZXArray@static.from_ncfiles
 		===================================
@@ -386,6 +386,13 @@ class ZXArray:##{{{
 			after 'dims'. This parameter must be a dict with one key (the new
 			dimension name), and the values is the list of variables (used as
 			coordinates)
+		transform_coords: dict
+			Dict of functions used to apply a transformation to coordinates
+			when they are read from netcdf files. Keywords must be the
+			dimension, and values must be callable.
+		infer_cftime: bool
+			If a dimension has a calendar and units attributes, use cftime to
+			infer a time axis.
 		zfile: str | None
 			Path to the zarr file for storage. Default path is given by
 			zxarray.zxParams.tmp_folder
@@ -420,6 +427,11 @@ class ZXArray:##{{{
 		else:
 			raise ValueError( f"Incoherent input var '{var}' or concat_var '{concat_var}'" )
 		
+		## Transform
+		for d in dims:
+			if d not in transform_coords:
+				transform_coords[d] = lambda c: c
+		
 		## Loop on files to find coordinates
 		coords = { d : [] for d in dims }
 		for ifile in ifiles:
@@ -436,8 +448,9 @@ class ZXArray:##{{{
 					v = incf.variables[d]
 					a = v.ncattrs()
 					c = v[:]
-					if "calendar" in a and "units" in a:
+					if infer_cftime and "calendar" in a and "units" in a:
 						c = cftime.num2date( c , units = v.getncattr("units") , calendar = v.getncattr("calendar") )
+					c = transform_coords[d](c)
 					coords[d] = coords[d] + c.tolist()
 		
 		for d in dims:
@@ -468,8 +481,9 @@ class ZXArray:##{{{
 					ncd = incf.variables[d]
 					a   = ncd.ncattrs()
 					c   = ncd[:]
-					if "calendar" in a and "units" in a:
+					if infer_cftime and "calendar" in a and "units" in a:
 						c = cftime.num2date( c , units = ncd.getncattr("units") , calendar = ncd.getncattr("calendar") )
+					c   = transform_coords[d](c)
 					c   = c.tolist()
 					coords.append( xr.DataArray( c , dims = [d] , coords = [c] ) )
 					shape.append( len(c) )
