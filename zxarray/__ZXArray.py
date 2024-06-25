@@ -25,9 +25,13 @@ from dataclasses import dataclass
 
 from .__sys import random_zfile
 
+import os
+import pathlib
 import numpy as np
 import xarray as xr
 import zarr
+import netCDF4
+import cftime
 
 
 #############
@@ -358,6 +362,127 @@ class ZXArray:##{{{
 		"""
 		return ZXArray( data = xX.values , dims = tuple(xX.dims) , coords = { d : xX[d] for d in xX.dims } , zfile = zfile , dtype = xX.dtype , zarr_kwargs = zarr_kwargs )
 	##}}}
+	
+	## static.from_ncfiles ## {{{
+	@staticmethod
+	def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ):
+		"""
+		zxarray.ZXArray@static.from_ncfiles
+		===================================
+		Init a zxarray.ZXArray from a set of netcdf files.
+		
+		Arguments
+		---------
+		args: list[str | path]
+			List or tuple of path to netcdf files, the joker '*' is allowed.
+		dims: tuple
+			Dimensions names of the variable(s), coordinates are infered from
+			the netcdf files
+		var: str | None
+			Common variable of all netcdf file to read. Can be None only if
+			'concat_var' is given.
+		concat_var: dict
+			Multiple variables to read and to stack in a new dimensions, added
+			after 'dims'. This parameter must be a dict with one key (the new
+			dimension name), and the values is the list of variables (used as
+			coordinates)
+		zfile: str | None
+			Path to the zarr file for storage. Default path is given by
+			zxarray.zxParams.tmp_folder
+		dtype: data_type
+			Data type
+		zarr_kwargs: dict
+			Keywords arguments given to zarr.open
+		
+		Returns
+		-------
+		zX: zxarray.ZXArray
+		"""
+		
+		## Build the file list
+		ifiles = []
+		for p in args:
+			d = os.path.dirname(p)
+			r = os.path.basename(p)
+			ifiles = ifiles + sorted(pathlib.Path(d).glob(r))
+		
+		if len(ifiles) == 0:
+			raise ValueError("No files found")
+		
+		## Build the variables list
+		if concat_var is not None:
+			dvar  = list(concat_var)[0]
+			lvars = np.asarray( concat_var[dvar] ).tolist()
+			has_vars = True
+		elif var is not None:
+			lvars = [var]
+			has_vars = False
+		else:
+			raise ValueError( f"Incoherent input var '{var}' or concat_var '{concat_var}'" )
+		
+		## Loop on files to find coordinates
+		coords = { d : [] for d in dims }
+		for ifile in ifiles:
+			with netCDF4.Dataset( ifile , 'r' ) as incf:
+				
+				## Check if variable in the file
+				if not len(list(set(list(incf.variables)) & set(lvars))) > 0:
+					raise ValueError( f"No input variables found in input file '{ifile}'" )
+				
+				## Find coordinates
+				for d in dims:
+					if d not in list(incf.dimensions):
+						raise ValueError( f"Dimension '{d}' not in the file '{ifile}'" )
+					v = incf.variables[d]
+					a = v.ncattrs()
+					c = v[:]
+					if "calendar" in a and "units" in a:
+						c = cftime.num2date( c , units = v.getncattr("units") , calendar = v.getncattr("calendar") )
+					coords[d] = coords[d] + c.tolist()
+		
+		for d in dims:
+			c = sorted(list(set(coords[d])))
+			coords[d] = xr.DataArray( c , dims = [d] , coords = [c] )
+		
+		## Init ZXArray
+		zdims   = tuple(dims)
+		zcoords = dict(coords)
+		if has_vars:
+			zdims = tuple(zdims) + (dvar,)
+			zcoords[dvar] = xr.DataArray( lvars , dims = [dvar] , coords = [lvars] )
+		zX = ZXArray( np.nan , dims = zdims , coords = zcoords , zfile = zfile , dtype = dtype , zarr_kwargs = zarr_kwargs )
+		
+		## And new loop on files to copy data
+		for ifile in ifiles:
+			with netCDF4.Dataset( ifile , 'r' ) as incf:
+				
+				## Find variable
+				for var in lvars:
+					if var in incf.variables:
+						break
+				
+				## Find coordinates
+				coords = []
+				shape  = []
+				for d in dims:
+					ncd = incf.variables[d]
+					a   = ncd.ncattrs()
+					c   = ncd[:]
+					if "calendar" in a and "units" in a:
+						c = cftime.num2date( c , units = ncd.getncattr("units") , calendar = ncd.getncattr("calendar") )
+					c   = c.tolist()
+					coords.append( xr.DataArray( c , dims = [d] , coords = [c] ) )
+					shape.append( len(c) )
+				
+				if has_vars:
+					coords.append( xr.DataArray( [var] , dims = [dvar] , coords = [ [var] ] ) )
+					shape.append(1)
+				
+				zX.loc[*coords] = incf.variables[var][:].reshape(shape)
+		
+		return zX
+	##}}}
+	
 	
 	def copy( self , zfile = None , zarr_kwargs = {} ): ##{{{
 		"""

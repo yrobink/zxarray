@@ -31,6 +31,8 @@ requires    = [
                "numpy",
                "xarray",
                "zarr",
+               "netCDF4",
+               "cftime"
               ]
 keywords    = []
 platforms   = ["linux","macosx"]
