@@ -759,8 +759,9 @@ class ZXArray:##{{{
 		---------
 		args: str | tuple[index]
 			a single string, or index of corresponding to coordinates. If index
-			is given, the last value of args can be 'x' or 'z' to return a
-			xarray.DataArray or a zxarray.ZXArray
+			is given, the values of args can be 'x' or 'z' to return a
+			xarray.DataArray or a zxarray.ZXArray, or True or False to drop or
+			not the 1-d coordinates
 		
 		Returns
 		-------
@@ -773,14 +774,17 @@ class ZXArray:##{{{
 				raise TypeError( "Invalid indexer, must be a string (for coordinates) or array indexer" ) 
 			return self.coords[args[0]]
 		
-		## Check if option for x or z array:
+		## Check if option for x or z array, or drop:
 		index = args[0]
 		mode  = "z"
-		if len(index) == self.ndim + 1:
-			mode  = index[-1]
-			index = index[:-1]
-		if not mode in ["z","x"]:
-			raise ValueError( "Mode must be 'z' or 'x'" )
+		drop  = False
+		if len(index) > self.ndim:
+			for md in index[self.ndim:]:
+				if md in ["z","x"]:
+					mode = md
+				if isinstance(md,bool):
+					drop = md
+			index = index[:self.ndim]
 		
 		## Check size
 		if not len(index) == self.ndim:
@@ -796,9 +800,9 @@ class ZXArray:##{{{
 		
 		## In fact just a call to the zisel / isel method
 		if mode == "z":
-			return self.zisel(**ocoords)
+			return self.zisel( drop = drop , **ocoords )
 		
-		return self.isel(**ocoords)
+		return self.isel( drop = drop , **ocoords )
 	##}}}
 	
 	def __setitem__( self , args , data ): ##{{{
