@@ -182,7 +182,17 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 		bidx = { bdims[i] : slice(bx[i],bx[i]+bsizes[i],1) for i in range(len(bsizes)) }
 		
 		## Extract array
-		xargs = [ Z.isel( **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
+		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
+#		xargs = []
+#		for Z,chunk in zip(args,chunks):
+#			xZ = Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } )
+#			for d in chunk:
+#				try:
+#					xZ = xZ.chunk( { d : 1 } )
+#				except ValueError:
+#					print(xZ)
+#					pass
+#			xargs.append(xZ)
 		
 		## Apply
 		res = xr.apply_ufunc( func , *xargs , **dask_kwargs )

@@ -184,6 +184,11 @@ class Test__ZXArray(unittest.TestCase):##{{{
 		szX = zX.loc[:,"2002",:,:]
 		
 		self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+		
+		sxX = xX.loc[:,"2002-01-01",:,:]
+		szX = zX.loc[:,"2002-01-01",:,:]
+		
+		self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
 	##}}}
 	
 	def test__zloc(self):##{{{
@@ -192,8 +197,13 @@ class Test__ZXArray(unittest.TestCase):##{{{
 		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
 		zX = zr.ZXArray.from_xarray(xX)
 		
-		sxX = xX.loc[:,"2002",:,:]
+		sxX =  xX.loc[:,"2002",:,:]
 		szX = zX.zloc[:,"2002",:,:]
+		
+		self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+		
+		sxX =  xX.loc[:,"2002-01-01",:,:]
+		szX = zX.zloc[:,"2002-01-01",:,:]
 		
 		self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
 	##}}}

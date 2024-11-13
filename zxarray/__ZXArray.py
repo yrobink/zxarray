@@ -98,7 +98,7 @@ class ZXArrayCoords:##{{{
 		return out
 	##}}}
 	
-	def coords_to_index( self , **kwargs ):##{{{
+	def coords_to_index( self , drop = True , **kwargs ):##{{{
 		"""
 		zxarray.ZXArrayCoords.coords_to_index
 		=====================================
@@ -106,6 +106,8 @@ class ZXArrayCoords:##{{{
 		
 		Parameters
 		----------
+		drop: bool
+			drop or not 1-dim coordinates. Default is True.
 		kwargs: dict
 			A dict of mapping dimension -> coords to find the index.
 		
@@ -125,9 +127,13 @@ class ZXArrayCoords:##{{{
 			if d in kwargs:
 				idx_val = xr.DataArray( range(self._coords[d].size) , dims = [d] , coords = [self.coords[d].copy()] ).sel( { d : kwargs[d] } ).values
 				if idx_val.size == 1:
-					dims.append(d)
-					coords[d] = self.coords[d][idx_val].copy()
-#					idx_val = int(idx_val)
+					if idx_val.ndim > 0:
+						idx_val = idx_val[0]
+					idx_val = int(idx_val)
+					if not drop:
+						dims.append(d)
+						idx_val   = np.array([idx_val])
+						coords[d] = self.coords[d][idx_val].copy()
 				else:
 					dims.append(d)
 					coords[d] = self.coords[d][idx_val].copy()
@@ -220,10 +226,11 @@ class ZXArrayLocator:##{{{
 		self._zxarr = zxarr
 	
 	def __getitem__( self , args ):
-		if not len(args) == self._zxarr.ndim:
+		if not ( len(args) == self._zxarr.ndim or len(args) == self._zxarr.ndim + 1 ):
 			raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
-		sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
-		return self._zxarr.sel(**sel)
+		drop = bool(args[-1]) if len(args) == self._zxarr.ndim + 1 else True
+		sel  = { d : arg for d,arg in zip(self._zxarr.dims,args) }
+		return self._zxarr.sel( drop = drop , **sel )
 	
 	def __setitem__( self , args , data ):
 		if not len(args) == self._zxarr.ndim:
@@ -249,10 +256,11 @@ class ZXArrayZLocator:##{{{
 		self._zxarr = zxarr
 	
 	def __getitem__( self , args ):
-		if not len(args) == self._zxarr.ndim:
+		if not ( len(args) == self._zxarr.ndim or len(args) == self._zxarr.ndim + 1 ):
 			raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
-		sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
-		return self._zxarr.zsel(**sel)
+		drop = bool(args[-1]) if len(args) == self._zxarr.ndim + 1 else True
+		sel  = { d : arg for d,arg in zip(self._zxarr.dims,args) }
+		return self._zxarr.zsel( drop = drop , **sel )
 	
 	def __setitem__( self , args , data ):
 		if not len(args) == self._zxarr.ndim:
@@ -592,7 +600,7 @@ class ZXArray:##{{{
 	
 	## Data accessors ## {{{
 	
-	def sel( self , **kwargs ):##{{{
+	def sel( self , drop = True , **kwargs ):##{{{
 		"""
 		zxarray.ZXArray.sel
 		===================
@@ -601,6 +609,8 @@ class ZXArray:##{{{
 		
 		Arguments
 		---------
+		drop: bool
+			drop or not 1-dim coordinates. Default is True.
 		kwargs: dict
 			mapping { dim : sub-coord } of a coordinates.
 		
@@ -609,12 +619,12 @@ class ZXArray:##{{{
 		xX: xarray.DataArray
 		"""
 		
-		index,dims,coords = self._internal.coords.coords_to_index(**kwargs)
+		index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **kwargs )
 		
 		return xr.DataArray( self._internal.zdata.get_orthogonal_selection(index) , dims = dims , coords = coords )
 	##}}}
 	
-	def zsel( self , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+	def zsel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
 		"""
 		zxarray.ZXArray.zsel
 		====================
@@ -623,6 +633,8 @@ class ZXArray:##{{{
 		
 		Arguments
 		---------
+		drop: bool
+			drop or not 1-dim coordinates. Default is True.
 		zfile: str | None
 			Path to the zarr file for storage. Default path is given by
 			zxarray.zxParams.tmp_folder
@@ -636,14 +648,14 @@ class ZXArray:##{{{
 		zX: zxarray.ZXArray
 		"""
 		
-		index,dims,coords = self._internal.coords.coords_to_index(**kwargs)
+		index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **kwargs )
 		xzarr = ZXArray( dims = dims , coords = coords , zfile = zfile , dtype = self.dtype , zarr_kwargs = zarr_kwargs )
 		xzarr._internal.zdata[:] = self._internal.zdata.get_orthogonal_selection(index)
 		
 		return xzarr
 	##}}}
 	
-	def isel( self , **kwargs ):##{{{
+	def isel( self , drop = True , **kwargs ):##{{{
 		"""
 		zxarray.ZXArray.isel
 		====================
@@ -652,6 +664,8 @@ class ZXArray:##{{{
 		
 		Arguments
 		---------
+		drop: bool
+			drop or not 1-dim coordinates. Default is True.
 		kwargs: dict
 			mapping { dim : sub-index } of index. Integer or slices are allowed.
 		
@@ -659,10 +673,10 @@ class ZXArray:##{{{
 		-------
 		xX: xarray.DataArray
 		"""
-		return self.sel( **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
+		return self.sel( drop = drop , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
 	##}}}
 	
-	def zisel( self , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+	def zisel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
 		"""
 		zxarray.ZXArray.zisel
 		=====================
@@ -671,6 +685,8 @@ class ZXArray:##{{{
 		
 		Arguments
 		---------
+		drop: bool
+			drop or not 1-dim coordinates. Default is True.
 		zfile: str | None
 			Path to the zarr file for storage. Default path is given by
 			zxarray.zxParams.tmp_folder
@@ -683,7 +699,7 @@ class ZXArray:##{{{
 		-------
 		zX: zxarray.ZXArray
 		"""
-		return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
+		return self.zsel( drop = drop , zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
 	##}}}
 	
 	## property.loc ##{{{
