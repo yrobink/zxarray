@@ -33,7 +33,7 @@ from .__DMUnit import DMUnit
 ## Functions ##
 ###############
 
-def apply_ufunc( func , bdims : list | tuple , *args ,
+def apply_ufunc( func , *args , bdims : list | tuple | None = None ,
 					bsizes : tuple[int] | list[int] | None = None,
 					max_mem : str | DMUnit | None = None ,
 					fb_mem = None ,
@@ -56,10 +56,10 @@ def apply_ufunc( func , bdims : list | tuple , *args ,
 	----------
 	func: callable
 		The function to apply.
-	bdims: list | tuple
-		block-dims, list of dimensions to construct the blocks.
 	*args: tuple of zxarray.ZXArray
 		Array to apply the function 'func'.
+	bdims: list | tuple
+		block-dims, list of dimensions to construct the blocks.
 	bsizes: tuple or None
 		block-sizes, the size of the block of length bdims. It is assumed that
 		blocks defined in this way will not cause a memory overflow. Otherwise

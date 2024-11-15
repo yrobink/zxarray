@@ -128,8 +128,8 @@ class Test__apply_ufunc(unittest.TestCase):
 		output_dims   = [["stats","array","y","x"]]
 		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
 		bdims         = ("y","x")
-		args   = [func_1return,bdims] + zdata
-		kwargs = { "max_mem" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
+		args   = [func_1return] + zdata
+		kwargs = { "bdims" : bdims , "max_mem" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
 		self.assertRaises( MemoryError ,  zr.apply_ufunc , *args , **kwargs ) 
 		
 	##}}}
@@ -164,7 +164,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		output_dims   = [["stats","array","y","x"]]
 		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
 		bdims         = ("y","x")
-		zS            = zr.apply_ufunc( func_1return , bdims , *zdata , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
+		zS            = zr.apply_ufunc( func_1return , *zdata , bdims = bdims , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
 		
 		self.assertTrue( np.abs( zS.dataarray - xS ).max() < 1e-3 )
 	##}}}
@@ -203,7 +203,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		output_dims   = [["stats","array","y","x"],["quantile","array","y","x"],["ufunc","array","y","x"]]
 		output_coords = [ { **output_coords[i] , **{ "y" : xdata[0].y , "x" : xdata[0].x } }  for i in range(3)]
 		bdims         = ("y","x")
-		lzS           = zr.apply_ufunc( func_Nreturn , bdims , *zdata , max_mem = zr.DMUnit("1Go") , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
+		lzS           = zr.apply_ufunc( func_Nreturn , *zdata , bdims = bdims , max_mem = zr.DMUnit("1Go") , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
 		
 		lerr = []
 		for xS,zS in zip(lxS,lzS):
