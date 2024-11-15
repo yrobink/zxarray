@@ -33,7 +33,7 @@ from .__DMUnit import DMUnit
 ## Functions ##
 ###############
 
-def apply_ufunc( func , *args , bdims : list | tuple | None = None ,
+def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 					bsizes : tuple[int] | list[int] | None = None,
 					max_mem : str | DMUnit | None = None ,
 					fb_mem = None ,
@@ -91,7 +91,6 @@ def apply_ufunc( func , *args , bdims : list | tuple | None = None ,
 	zX: zxarray.ZXArray | tuple[zxarray.ZXArray]
 		The result of the computation.
 	"""
-	
 	## ZXArray class, to remove the import
 	ZXArray = type(args[0])
 	
@@ -117,6 +116,15 @@ def apply_ufunc( func , *args , bdims : list | tuple | None = None ,
 	
 	## Create output ZXArray
 	zout = [ ZXArray( np.nan , dims = output_dims[i] , coords = output_coords[i] , zfile = output_zfile[i] , dtype = output_dtypes[i] , zarr_kwargs = zarr_kwargs ) for i in range(n_out) ]
+	
+	## Special case, len(bdims) == 0
+	if len(bdims) == 0:
+		xargs = [ arg.dataarray.values for arg in args ]
+		xout  = func( *xargs , **dask_kwargs.get( "kwargs" , {} ) )
+		for i in range(len(zout)):
+			zout[i]._internal.zdata[:] = xout[i][:]
+#		zout  = [ ZXArray.from_xarray(x) for x in xout ]
+		return zout
 	
 	## Find block coords
 	bcoords = []
@@ -183,16 +191,6 @@ def apply_ufunc( func , *args , bdims : list | tuple | None = None ,
 		
 		## Extract array
 		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
-#		xargs = []
-#		for Z,chunk in zip(args,chunks):
-#			xZ = Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in Z.dims } } )
-#			for d in chunk:
-#				try:
-#					xZ = xZ.chunk( { d : 1 } )
-#				except ValueError:
-#					print(xZ)
-#					pass
-#			xargs.append(xZ)
 		
 		## Apply
 		res = xr.apply_ufunc( func , *xargs , **dask_kwargs )
