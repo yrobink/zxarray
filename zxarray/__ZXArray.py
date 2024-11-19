@@ -120,6 +120,8 @@ class ZXArrayCoords:##{{{
 		Coords:
 			New coords
 		"""
+		if not isinstance(drop,bool):
+			raise ValueError("drop argument must be a boolean" )
 		index  = []
 		coords = {}
 		dims   = []
