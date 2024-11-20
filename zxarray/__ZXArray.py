@@ -746,7 +746,7 @@ class ZXArray:##{{{
 		-------
 		xarray.DataArray
 		"""
-		idx = [slice(None) for _ in range(self.ndim)]
+		idx = [slice(None) for _ in range(self.ndim)] + [False]
 		return self.loc[idx]
 	##}}}
 	

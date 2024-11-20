@@ -123,7 +123,6 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 		xout  = func( *xargs , **dask_kwargs.get( "kwargs" , {} ) )
 		for i in range(len(zout)):
 			zout[i]._internal.zdata[:] = xout[i][:]
-#		zout  = [ ZXArray.from_xarray(x) for x in xout ]
 		return zout
 	
 	## Find block coords
