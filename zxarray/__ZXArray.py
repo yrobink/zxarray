@@ -238,11 +238,11 @@ class ZXArrayLocator:##{{{
 		if not len(args) == self._zxarr.ndim:
 			raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
 		sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
-		index,dims,coords = self._zxarr._internal.coords.coords_to_index(**sel)
-		
-		data = np.asarray( data , dtype = self._zxarr.dtype )
+		index,dims,coords = self._zxarr._internal.coords.coords_to_index( drop = False , **sel )
+		shape = tuple([coords[d].size for d in dims])
+		data = np.asarray( data , dtype = self._zxarr.dtype ).reshape(shape)
 		if data.ndim == 0:
-			data = np.zeros( [coords[d].size for d in dims] ) + data
+			data = np.zeros(shape) + data
 		self._zxarr._internal.zdata.set_orthogonal_selection( index , data[:] )
 ##}}}
 
@@ -507,6 +507,21 @@ class ZXArray:##{{{
 		return zX
 	##}}}
 	
+	def to_netcdf( self , ofile , name ):##{{{
+		"""
+		zxarray.ZXArray.to_netcdf
+		=========================
+		Store the data in a netcdf file
+		
+		Arguments
+		---------
+		ofile: str
+			output file
+		name: str
+			Name of the variables
+		"""
+		raise NotImplementedError
+	##}}}
 	
 	def copy( self , zfile = None , zarr_kwargs = {} ): ##{{{
 		"""
