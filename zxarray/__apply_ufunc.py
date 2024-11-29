@@ -148,7 +148,14 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 		if fb_mem is None:
 			total_unit_block = DMUnit.zero()
 			for Z in itt.chain( args , zout ):
-				sizeZ = DMUnit( n = np.finfo(Z.dtype).bits // DMUnit.bits_per_octet , unit = 'o' )
+				try:
+					nbits = np.finfo(Z.dtype).bits
+				except:
+					try:
+						nbits = np.iinfo(Z.dtype).bits
+					except:
+						nbits = 64
+				sizeZ = DMUnit( n = nbits // DMUnit.bits_per_octet , unit = 'o' )
 				for d in Z.dims:
 					if d in bdims: continue
 					sizeZ *= Z.coords[d].size
