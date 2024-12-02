@@ -177,7 +177,14 @@ class DMUnit:
 		s: zxarray.DMUnit
 			Memory size of X
 		"""
-		return DMUnit( n = X.size * np.finfo(X.dtype).bits // DMUnit.bits_per_octet , unit = "o" )
+		try:
+			bits = np.finfo(X).bits
+		except:
+			try:
+				bits = np.iinfo(X).bits
+			except:
+				bits = 64
+		return DMUnit( n = X.size * bits // DMUnit.bits_per_octet , unit = "o" )
 	##}}}
 	
 	def _init_from_str( self , s ):##{{{

@@ -20,14 +20,25 @@
 ## Imports ##
 #############
 
+import logging
+import warnings
 import itertools as itt
 import psutil
+import gc
+#import tracemalloc
 
 import numpy  as np
 import xarray as xr
 
 from .__DMUnit import DMUnit
 
+##################
+## Init logging ##
+##################
+
+logging.captureWarnings(True)
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 ###############
 ## Functions ##
@@ -114,6 +125,10 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 	if output_dtypes is None:
 		output_dtypes = ["float32" for _ in range(n_out)]
 	
+	logging.info(f"output dims : {output_dims}")
+	logging.info(f"output zfile: {output_zfile}")
+	logging.info(f"output dtypes: {output_dtypes}")
+	
 	## Create output ZXArray
 	zout = [ ZXArray( np.nan , dims = output_dims[i] , coords = output_coords[i] , zfile = output_zfile[i] , dtype = output_dtypes[i] , zarr_kwargs = zarr_kwargs ) for i in range(n_out) ]
 	
@@ -146,6 +161,7 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 		
 		## function_block_memory
 		if fb_mem is None:
+			logger.debug( "fb mem not given, infer it" )
 			total_unit_block = DMUnit.zero()
 			for Z in itt.chain( args , zout ):
 				try:
@@ -176,21 +192,27 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 				if bsizes[i] < 2:
 					bsizes[i] = 1
 					break
-				bsizes[i] = bsizes[i] // 2
+				bsizes[i] = bsizes[i] - 1
 			notfind[i] = False
 			ssizes[i]  = np.inf
 		mem_need = fb_mem(bsizes)
 		
 		if mem_need > max_mem:
 			raise MemoryError( f"Insufficient memory, maximal memory lower than memory needed: max_mem = {max_mem} < {mem_need} = mem_need" )
+	logger.debug( f"Block size found: {bsizes}, mem_need: {mem_need}" )
 	
 	## Find dimensions of chunks
 	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
 	if not len(chunks) == len(args):
 		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
+	logger.debug( f"Chunk dimensions: {chunks}" )
+	
+	## Find values of chunks
 	
 	## Loop on blocks
 	for bx in itt.product(*[range(0,c.size,b) for c,b in zip(bcoords,bsizes)]):
+		
+#		tracemalloc.start()
 		
 		## Block indexes
 		bidx = { bdims[i] : slice(bx[i],bx[i]+bsizes[i],1) for i in range(len(bsizes)) }
@@ -213,6 +235,17 @@ def apply_ufunc( func , *args , bdims : list | tuple = [] ,
 			xrcoords = { **{ d : slice(None) for d in zout[i].dims if d not in bdims } , **{ d : bidx[d] for d in bdims if d in zout[i].dims } }
 			zidx     = [ xrcoords[d] for d in zout[i].dims ]
 			zout[i][*zidx] = res[i].values
+		
+		## Clean memory
+		del xargs
+		del res
+		gc.collect()
+		
+#		current,peak = tracemalloc.get_traced_memory()
+#		current = DMUnit( n = current , unit = "b" )
+#		peak    = DMUnit( n = peak    , unit = "b" )
+#		logger.debug( f"current: {current}" )
+#		logger.debug( f"peak   : {peak}" )
 	
 	if n_out == 1:
 		return zout[0]
