@@ -106,34 +106,34 @@ def func_Nreturn( *args ):##{{{
 ###########
 
 class Test__apply_ufunc(unittest.TestCase):
-#	
-#	def test_memory_error(self):##{{{
-#		
-#		## Data
-#		ndata = 3
-#		data,xdata,zdata = build_data_example(ndata)
-#		
-#		## Set parameters
-#		input_core_dims    = [["sample","time"] for _ in range(len(xdata))]
-#		output_core_dims   = [["array","stats"]]
-#		output_dtypes      = [float for _ in range(ndata)]
-#		vectorize          = False
-#		dask               = "parallelized"
-#		output_coords      = { "stats" : ["m","s","n","x"] , "array" : range(ndata) }
-#		output_sizes       = { "stats" : 4 , "array" : ndata }
-#		dask_gufunc_kwargs = { "output_sizes" : output_sizes }
-#		transpose          = ("stats","array","y","x")
-#		dask_kwargs        = { "input_core_dims" : input_core_dims , "output_core_dims" : output_core_dims , "output_dtypes" : output_dtypes , "vectorize" : vectorize , "dask" : dask , "dask_gufunc_kwargs" : dask_gufunc_kwargs }
-#		
-#		output_dims   = [["stats","array","y","x"]]
-#		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
-#		bdims         = ("y","x")
-#		args   = [func_1return] + zdata
-#		kwargs = { "block_dims" : bdims , "total_memory" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
-#		self.assertRaises( MemoryError ,  zr.apply_ufunc , *args , **kwargs ) 
-#		
-#	##}}}
-#	
+	
+	def test_memory_error(self):##{{{
+		
+		## Data
+		ndata = 3
+		data,xdata,zdata = build_data_example(ndata)
+		
+		## Set parameters
+		input_core_dims    = [["sample","time"] for _ in range(len(xdata))]
+		output_core_dims   = [["array","stats"]]
+		output_dtypes      = [float for _ in range(ndata)]
+		vectorize          = False
+		dask               = "parallelized"
+		output_coords      = { "stats" : ["m","s","n","x"] , "array" : range(ndata) }
+		output_sizes       = { "stats" : 4 , "array" : ndata }
+		dask_gufunc_kwargs = { "output_sizes" : output_sizes }
+		transpose          = ("stats","array","y","x")
+		dask_kwargs        = { "input_core_dims" : input_core_dims , "output_core_dims" : output_core_dims , "output_dtypes" : output_dtypes , "vectorize" : vectorize , "dask" : dask , "dask_gufunc_kwargs" : dask_gufunc_kwargs }
+		
+		output_dims   = [["stats","array","y","x"]]
+		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
+		bdims         = ("y","x")
+		args   = [func_1return] + zdata
+		kwargs = { "block_dims" : bdims , "total_memory" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
+		self.assertRaises( MemoryError ,  zr.apply_ufunc , *args , **kwargs ) 
+		
+	##}}}
+	
 	def test_comparison_xarray_1return(self):##{{{
 		
 		## Data
