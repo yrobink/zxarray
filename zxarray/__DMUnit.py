@@ -188,6 +188,10 @@ class DMUnit:
 	##}}}
 	
 	def _init_from_str( self , s ):##{{{
+		
+		if isinstance( s , type(self) ):
+			s = f"{s.b}b"
+		
 		s = s.replace(" ","")
 		
 		## Start with unit
