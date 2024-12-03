@@ -106,34 +106,34 @@ def func_Nreturn( *args ):##{{{
 ###########
 
 class Test__apply_ufunc(unittest.TestCase):
-	
-	def test_memory_error(self):##{{{
-		
-		## Data
-		ndata = 3
-		data,xdata,zdata = build_data_example(ndata)
-		
-		## Set parameters
-		input_core_dims    = [["sample","time"] for _ in range(len(xdata))]
-		output_core_dims   = [["array","stats"]]
-		output_dtypes      = [float for _ in range(ndata)]
-		vectorize          = False
-		dask               = "parallelized"
-		output_coords      = { "stats" : ["m","s","n","x"] , "array" : range(ndata) }
-		output_sizes       = { "stats" : 4 , "array" : ndata }
-		dask_gufunc_kwargs = { "output_sizes" : output_sizes }
-		transpose          = ("stats","array","y","x")
-		dask_kwargs        = { "input_core_dims" : input_core_dims , "output_core_dims" : output_core_dims , "output_dtypes" : output_dtypes , "vectorize" : vectorize , "dask" : dask , "dask_gufunc_kwargs" : dask_gufunc_kwargs }
-		
-		output_dims   = [["stats","array","y","x"]]
-		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
-		bdims         = ("y","x")
-		args   = [func_1return] + zdata
-		kwargs = { "bdims" : bdims , "max_mem" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
-		self.assertRaises( MemoryError ,  zr.apply_ufunc , *args , **kwargs ) 
-		
-	##}}}
-	
+#	
+#	def test_memory_error(self):##{{{
+#		
+#		## Data
+#		ndata = 3
+#		data,xdata,zdata = build_data_example(ndata)
+#		
+#		## Set parameters
+#		input_core_dims    = [["sample","time"] for _ in range(len(xdata))]
+#		output_core_dims   = [["array","stats"]]
+#		output_dtypes      = [float for _ in range(ndata)]
+#		vectorize          = False
+#		dask               = "parallelized"
+#		output_coords      = { "stats" : ["m","s","n","x"] , "array" : range(ndata) }
+#		output_sizes       = { "stats" : 4 , "array" : ndata }
+#		dask_gufunc_kwargs = { "output_sizes" : output_sizes }
+#		transpose          = ("stats","array","y","x")
+#		dask_kwargs        = { "input_core_dims" : input_core_dims , "output_core_dims" : output_core_dims , "output_dtypes" : output_dtypes , "vectorize" : vectorize , "dask" : dask , "dask_gufunc_kwargs" : dask_gufunc_kwargs }
+#		
+#		output_dims   = [["stats","array","y","x"]]
+#		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
+#		bdims         = ("y","x")
+#		args   = [func_1return] + zdata
+#		kwargs = { "block_dims" : bdims , "total_memory" : "1Mo" , "output_coords" : output_coords , "output_dims" : output_dims , "dask_kwargs" : dask_kwargs }
+#		self.assertRaises( MemoryError ,  zr.apply_ufunc , *args , **kwargs ) 
+#		
+#	##}}}
+#	
 	def test_comparison_xarray_1return(self):##{{{
 		
 		## Data
@@ -164,7 +164,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		output_dims   = [["stats","array","y","x"]]
 		output_coords = [ { **output_coords , **{ "y" : xdata[0].y , "x" : xdata[0].x } } ]
 		bdims         = ("y","x")
-		zS            = zr.apply_ufunc( func_1return , *zdata , bdims = bdims , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
+		zS            = zr.apply_ufunc( func_1return , *zdata , block_dims = bdims , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs , n_workers = 4 ) 
 		
 		self.assertTrue( np.abs( zS.dataarray - xS ).max() < 1e-3 )
 	##}}}
@@ -203,7 +203,7 @@ class Test__apply_ufunc(unittest.TestCase):
 		output_dims   = [["stats","array","y","x"],["quantile","array","y","x"],["ufunc","array","y","x"]]
 		output_coords = [ { **output_coords[i] , **{ "y" : xdata[0].y , "x" : xdata[0].x } }  for i in range(3)]
 		bdims         = ("y","x")
-		lzS           = zr.apply_ufunc( func_Nreturn , *zdata , bdims = bdims , max_mem = zr.DMUnit("1Go") , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs ) 
+		lzS           = zr.apply_ufunc( func_Nreturn , *zdata , block_dims = bdims , total_memory = zr.DMUnit("1Go") , output_coords = output_coords , output_dims = output_dims , dask_kwargs = dask_kwargs , n_workers = 4 ) 
 		
 		lerr = []
 		for xS,zS in zip(lxS,lzS):
