@@ -59,7 +59,8 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 					n_workers : int = 1,
 					threads_per_worker : int = 1,
 					memory_per_worker : DMUnit | str = None,
-					manage_client : bool = True
+					manage_client : bool = True,
+					**kwargs
 					):
 	"""
 	zxarray.apply_ufunc
@@ -223,38 +224,58 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		                  }
 		client = dask.distributed.Client( **client_config )
 	
+	nblocks = len([ k for k in itt.product(*[range(0,c.size,b) for c,b in zip(bcoords,bsizes)])])
+	iblock  = 0
+	
 	## Loop on blocks
 	for bx in itt.product(*[range(0,c.size,b) for c,b in zip(bcoords,bsizes)]):
+		
+		iblock += 1
+		logger.debug( f"| Block {iblock} / {nblocks}" )
 		
 		## Block indexes
 		bidx = { block_dims[i] : slice(bx[i],bx[i]+bsizes[i],1) for i in range(len(bsizes)) }
 		
 		## Extract array
-		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
+		logger.debug( "| | => From disk to memory" )
+		if kwargs.get("no_chunk",True):
+			xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ) for Z,chunk in zip(args,chunks) ]
+		else:
+			xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
 		
 		## Apply
-		res = xr.apply_ufunc( func , *xargs , **dask_kwargs )
+		logger.debug( "| | => Create apply" )
+		ires = xr.apply_ufunc( func , *xargs , **dask_kwargs )
 		
 		## Compute and transpose
-		if isinstance(res,xr.DataArray):
-			res = [res]
+		if isinstance(ires,xr.DataArray):
+			ires = [ires]
 		else:
-			res = list(res)
-		res = [ R.compute().transpose(*Z.dims) for R,Z in zip(res,zout) ]
+			ires = list(ires)
+		logger.debug( "| | => Compute" )
+		ores = [ R.compute() for R in ires ]
+		
+		logger.debug( "| | => Transpose" )
+		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
 		
 		## And save
+		logger.debug( "| | => From memory to disk" )
 		for i in range(n_out):
 			xrcoords = { **{ d : slice(None) for d in zout[i].dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in zout[i].dims } }
 			zidx     = [ xrcoords[d] for d in zout[i].dims ]
-			zout[i][*zidx] = res[i].values
+			zout[i][*zidx] = ores[i].values
 		
 		## Clean memory
+		logger.debug( "| | => Clean memory" )
 		del xargs
-		del res
+		del ires
+		del ores
 		gc.collect()
 	
 	if manage_client:
+		client.shutdown()
 		client.close()
+		cluster.close()
 	
 	if n_out == 1:
 		return zout[0]
