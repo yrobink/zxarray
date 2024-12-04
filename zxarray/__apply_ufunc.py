@@ -98,8 +98,6 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		Arguments passed to zarr.
 	manage_client:
 		If the dask.distributed.Client is managed in this function
-	cluster: distributed.deploy.spec.SpecCluster
-		cluster used if manage_client is True, default is dask.distributed.LocalCluster
 	n_workers:
 		Number of workers, used only if manage_client is True
 	threads_per_worker:
@@ -275,7 +273,6 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 	if manage_client:
 		client.shutdown()
 		client.close()
-		cluster.close()
 	
 	if n_out == 1:
 		return zout[0]
