@@ -31,6 +31,7 @@ from .__sys      import random_zfile
 from .__zxParams import zxParams
 from .__ZXArray  import ZXArray
 from .__apply_ufunc import apply_ufunc
+from .__map_ufunc import map_ufunc
 
 ## Documentation
 ################
