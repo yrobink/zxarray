@@ -296,7 +296,7 @@ class ZXArray:##{{{
 	
 	## I/O ##{{{
 	
-	def __init__( self , data = None , dims = None , coords = None , zfile = None , dtype = "float32" , zarr_kwargs = {} ): ##{{{
+	def __init__( self , data = None , dims = None , coords = None , zfile = None , dtype = "float32" , zarr_kwargs = { "compressor" : None } ): ##{{{
 		"""
 		zxarray.ZXArray.__init__
 		========================
@@ -350,7 +350,7 @@ class ZXArray:##{{{
 	
 	## static.from_xarray ## {{{
 	@staticmethod
-	def from_xarray( xX : xr.DataArray , zfile : str | None = None , zarr_kwargs : dict = {} ):
+	def from_xarray( xX : xr.DataArray , zfile : str | None = None , zarr_kwargs : dict = {"compressor" : None} ):
 		"""
 		zxarray.ZXArray@static.from_xarray
 		==================================
@@ -375,7 +375,7 @@ class ZXArray:##{{{
 	
 	## static.from_ncfiles ## {{{
 	@staticmethod
-	def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ):
+	def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {"compressor": None} ):
 		"""
 		zxarray.ZXArray@static.from_ncfiles
 		===================================
@@ -523,7 +523,7 @@ class ZXArray:##{{{
 		raise NotImplementedError
 	##}}}
 	
-	def copy( self , zfile = None , zarr_kwargs = {} ): ##{{{
+	def copy( self , zfile = None , zarr_kwargs = { "compressor" : None } ): ##{{{
 		"""
 		zxarray.ZXArray.copy
 		====================
@@ -641,7 +641,7 @@ class ZXArray:##{{{
 		return xr.DataArray( self._internal.zdata.get_orthogonal_selection(index) , dims = dims , coords = coords )
 	##}}}
 	
-	def zsel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+	def zsel( self , drop = True , zfile = None , zarr_kwargs = {"compressor" : None} , **kwargs ): ##{{{
 		"""
 		zxarray.ZXArray.zsel
 		====================
@@ -693,7 +693,7 @@ class ZXArray:##{{{
 		return self.sel( drop = drop , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
 	##}}}
 	
-	def zisel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+	def zisel( self , drop = True , zfile = None , zarr_kwargs = {"compressor" : None} , **kwargs ): ##{{{
 		"""
 		zxarray.ZXArray.zisel
 		=====================

@@ -209,6 +209,13 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 	
 	## Find dimensions of chunks
 	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+	chunked_dims = []
+	for c in chunks:
+		chunked_dims = chunked_dims + list(c)
+	chunked_dims = set(chunked_dims)
+	w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
+	chunks = [ { d : Z[d].size // w_ratio for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+	
 	if not len(chunks) == len(args):
 		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
 	logger.debug( f"Chunk dimensions: {chunks}" )
