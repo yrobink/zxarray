@@ -20,6 +20,7 @@
 ## Imports ##
 #############
 
+import typing
 import logging
 import warnings
 import itertools as itt
@@ -28,8 +29,6 @@ import gc
 
 import numpy  as np
 import xarray as xr
-import dask
-import dask.distributed
 import distributed
 
 from .__DMUnit import DMUnit
@@ -49,7 +48,6 @@ logger.addHandler(logging.NullHandler())
 def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 					total_memory : DMUnit | str = None,
 					block_memory = None ,
-					chunk_memory = None ,
 					output_coords : dict | list | None = None ,
 					output_dims : list | tuple | None = None ,
 					output_dtypes : list | None = None ,
@@ -59,7 +57,8 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 					n_workers : int = 1,
 					threads_per_worker : int = 1,
 					memory_per_worker : DMUnit | str = None,
-					manage_client : bool = True,
+					client : distributed.Client | None = None,
+					cluster : typing.Any = None,
 					**kwargs
 					):
 	"""
@@ -96,16 +95,17 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		Arguments passed to xarray.apply_ufunc.
 	zarr_kwargs:
 		Arguments passed to zarr.
-	manage_client:
-		If the dask.distributed.Client is managed in this function
 	n_workers:
-		Number of workers, used only if manage_client is True
+		Number of workers
 	threads_per_worker:
-		Number of threads per worker, used only if manage_client is True
+		Number of threads per worker
 	memory_per_worker:
 		Can replace total_memory, the both can not be simultaneously set
-	manage_client:
-		Manage or not the dask.distributed.Client in this function.
+	client:
+		The client for parallel computing, use 'processes' if not given and
+		cluster not given
+	cluster:
+		The cluster used, default is distributed.LocalCluster.
 	
 	Returns
 	-------
@@ -164,6 +164,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		total_memory = n_workers * memory_per_worker
 	else:
 		total_memory = DMUnit(total_memory)
+		memory_per_worker = total_memory // n_workers
 	
 	## function_block_memory
 	if block_memory is None:
@@ -220,14 +221,24 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
 	logger.debug( f"Chunk dimensions: {chunks}" )
 	
-	## Create the client
-	if manage_client:
-		client_config = { "n_workers"          : n_workers ,
-		                  "threads_per_worker" : threads_per_worker ,
-		                  "memory_limit"       : f"{total_memory.B}B",
-		                  "processes"          : False,
-		                  }
-		client = dask.distributed.Client( **client_config )
+	## Create the cluster / client
+	manage_client = False
+	if client is None and cluster is None:
+		cluster = distributed.LocalCluster( n_workers  = n_workers , threads_per_worker = threads_per_worker , memory_limit = f"{memory_per_worker.B}B" , processes = False )
+		client  = distributed.Client(cluster)
+		manage_client = True
+	else:
+		if client is not None:
+			cluster = client.cluster
+		elif cluster is not None:
+			client = distributed.Client(cluster)
+	logger.debug( f"client : {client}" )
+	logger.debug( f"cluster: {cluster}" )
+	
+	##
+	logger.debug("dask_kwargs:" )
+	for key in dask_kwargs:
+		logger.debug( f" * {key} : {dask_kwargs[key]}" )
 	
 	nblocks = len([ k for k in itt.product(*[range(0,c.size,b) for c,b in zip(bcoords,bsizes)])])
 	iblock  = 0
@@ -243,10 +254,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		
 		## Extract array
 		logger.debug( "| | => From disk to memory" )
-		if kwargs.get("no_chunk",True):
-			xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ) for Z,chunk in zip(args,chunks) ]
-		else:
-			xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
+		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
 		
 		## Apply
 		logger.debug( "| | => Create apply" )
@@ -258,7 +266,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		else:
 			ires = list(ires)
 		logger.debug( "| | => Compute" )
-		ores = [ R.compute() for R in ires ]
+		ores = [ R.compute( scheduler = client ) for R in ires ]
 		
 		logger.debug( "| | => Transpose" )
 		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
