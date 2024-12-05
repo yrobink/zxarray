@@ -45,6 +45,8 @@ class DMUnit:
 	- 1MB = 1000^2B,
 	- 1GB = 1000^3B,
 	- 1TB = 1000^4B;
+	- 1PB = 1000^5B;
+	- 1HB = 1000^6B;
 	
 	and those in base 1024:
 	
@@ -52,6 +54,8 @@ class DMUnit:
 	- 1MiB = 1024^2B,
 	- 1GiB = 1024^3B,
 	- 1TiB = 1024^4B.
+	- 1PiB = 1024^5B,
+	- 1HiB = 1024^6B.
 	
 	Conversions can be made using the corresponding properties. Comparison and
 	arithmetic operators are overloaded:
@@ -157,6 +161,25 @@ class DMUnit:
 		return DMUnit( n = 0 )
 	##}}}
 	
+	## @static.one ##{{{
+	@staticmethod
+	def one():
+		"""
+		zxarray.DMUnit@static.one
+		=========================
+		Static method that returns one.
+		
+		Parameters
+		----------
+		
+		Returns
+		-------
+		s: zxarray.DMUnit
+			A zxarrau.DMUnit of size 1b.
+		"""
+		return DMUnit( n = 1 , unit = 'b' )
+	##}}}
+	
 	## @static.sizeof_array ##{{{
 	@staticmethod
 	def sizeof_array(X):
@@ -184,7 +207,7 @@ class DMUnit:
 				bits = np.iinfo(X).bits
 			except:
 				bits = 64
-		return DMUnit( n = X.size * bits // DMUnit.bits_per_octet , unit = "o" )
+		return DMUnit( n = int( X.size * (bits // DMUnit.bits_per_octet) ) , unit = "o" )
 	##}}}
 	
 	def _init_from_str( self , s ):##{{{
@@ -262,8 +285,12 @@ class DMUnit:
 			return "{:.2f}Mo".format(self.Mo)
 		elif int(self.To) == 0:
 			return "{:.2f}Go".format(self.Go)
+		elif int(self.Po) == 0:
+			return "{:.2f}To".format(self.To)
+		elif int(self.Ho) == 0:
+			return "{:.2f}Po".format(self.Po)
 		
-		return "{:.2f}To".format(self.To)
+		return "{:.2f}Ho".format(self.Ho)
 		
 	##}}}
 	
@@ -311,16 +338,18 @@ class DMUnit:
 		- if 'prefix == M', return 2
 		- if 'prefix == G', return 3
 		- if 'prefix == T', return 4
+		- if 'prefix == P', return 5
+		- if 'prefix == E', return 6
 		- else return 0
 		"""
-		if self.prefix.lower() == "k":
-			return 1
-		if self.prefix.lower() == "m":
-			return 2
-		if self.prefix.lower() == "g":
-			return 3
-		if self.prefix.lower() == "t":
-			return 4
+		match self.prefix.lower():
+			case 'k': return 1
+			case 'm': return 2
+			case 'g': return 3
+			case 't': return 4
+			case 'p': return 5
+			case 'e': return 6
+			case  _ : return 0
 		return 0
 	
 	##}}}
@@ -362,6 +391,20 @@ class DMUnit:
 		"""
 		return self.bits / self.bits_per_octet / 1000**4
 	
+	@property
+	def Po( self ):
+		"""
+		Return number of peta-octets (unit prefix = 1000**5).
+		"""
+		return self.bits / self.bits_per_octet / 1000**5
+	
+	@property
+	def Eo( self ):
+		"""
+		Return number of hexa-octets (unit prefix = 1000**6).
+		"""
+		return self.bits / self.bits_per_octet / 1000**6
+	
 	##}}}
 	
 	## iOctet properties ##{{{
@@ -400,6 +443,20 @@ class DMUnit:
 		Return number of tera-i-octets (unit prefix = 1024**4).
 		"""
 		return self.bits / self.bits_per_octet / 1024**4
+	
+	@property
+	def Pio( self ):
+		"""
+		Return number of peta-i-octets (unit prefix = 1024**5).
+		"""
+		return self.bits / self.bits_per_octet / 1024**5
+	
+	@property
+	def Eio( self ):
+		"""
+		Return number of hexa-i-octets (unit prefix = 1024**6).
+		"""
+		return self.bits / self.bits_per_octet / 1024**6
 	
 	##}}}
 	
@@ -440,6 +497,20 @@ class DMUnit:
 		"""
 		return self.bits / self.bits_per_byte / 1000**4
 	
+	
+	@property
+	def PB( self ):
+		"""
+		Return number of peta-bytes (unit prefix = 1000**5).
+		"""
+		return self.bits / self.bits_per_byte / 1000**5
+	
+	@property
+	def EB( self ):
+		"""
+		Return number of hexa-bytes (unit prefix = 1000**6).
+		"""
+		return self.bits / self.bits_per_byte / 1000**6
 	##}}}
 	
 	## iByte properties ##{{{
@@ -478,6 +549,21 @@ class DMUnit:
 		Return number of tera-i-bytes (unit prefix = 1024**4).
 		"""
 		return self.bits / self.bits_per_byte / 1024**4
+	
+	
+	@property
+	def PiB( self ):
+		"""
+		Return number of peta-i-bytes (unit prefix = 1024**5).
+		"""
+		return self.bits / self.bits_per_byte / 1024**5
+	
+	@property
+	def EiB( self ):
+		"""
+		Return number of hexa-i-bytes (unit prefix = 1024**6).
+		"""
+		return self.bits / self.bits_per_byte / 1024**6
 	
 	##}}}
 	
@@ -518,6 +604,20 @@ class DMUnit:
 		"""
 		return self.bits / 1000**4
 	
+	@property
+	def Pb( self ):
+		"""
+		Return number of peta-bits (unit prefix = 1000**5).
+		"""
+		return self.bits / 1000**5
+	
+	@property
+	def Eb( self ):
+		"""
+		Return number of hexa-bits (unit prefix = 1000**6).
+		"""
+		return self.bits / 1000**6
+	
 	##}}}
 	
 	## ibits properties ##{{{
@@ -556,6 +656,21 @@ class DMUnit:
 		Return number of tera-i-bits (unit prefix = 1024**4).
 		"""
 		return self.bits / 1024**4
+	
+	@property
+	def Pib( self ):
+		"""
+		Return number of peta-i-bits (unit prefix = 1024**5).
+		"""
+		return self.bits / 1024**5
+	
+	@property
+	def Eib( self ):
+		"""
+		Return number of hexa-i-bits (unit prefix = 1024**6).
+		"""
+		return self.bits / 1024**6
+	
 	##}}}
 	
 	## Comparison operators overload ##{{{
