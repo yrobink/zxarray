@@ -29,6 +29,7 @@ import gc
 
 import numpy  as np
 import xarray as xr
+import dask
 import distributed
 
 from .__DMUnit import DMUnit
@@ -48,6 +49,7 @@ logger.addHandler(logging.NullHandler())
 def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 					total_memory : DMUnit | str = None,
 					block_memory = None ,
+					chunks = None,
 					output_coords : dict | list | None = None ,
 					output_dims : list | tuple | None = None ,
 					output_dtypes : list | None = None ,
@@ -209,13 +211,15 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 	logger.debug( f"Block size found: {bsizes}, memory_needed: {memory_needed}" )
 	
 	## Find dimensions of chunks
-	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
-	chunked_dims = []
-	for c in chunks:
-		chunked_dims = chunked_dims + list(c)
-	chunked_dims = set(chunked_dims)
-	w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
-	chunks = [ { d : int(max( 1 , Z[d].size // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+	if chunks is None:
+		chunks = [ { d : 'auto' for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+#	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+#	chunked_dims = []
+#	for c in chunks:
+#		chunked_dims = chunked_dims + list(c)
+#	chunked_dims = set(chunked_dims)
+#	w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
+#	chunks = [ { d : int(max( 1 , Z[d].size // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
 	
 	if not len(chunks) == len(args):
 		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
@@ -255,6 +259,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		## Extract array
 		logger.debug( "| | => From disk to memory" )
 		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
+		logger.debug(xargs)
 		
 		## Apply
 		logger.debug( "| | => Create apply" )
@@ -266,7 +271,8 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		else:
 			ires = list(ires)
 		logger.debug( "| | => Compute" )
-		ores = [ R.compute( scheduler = client ) for R in ires ]
+		ores = dask.compute( *ires , scheduler = client )
+#		ores = [ R.compute( scheduler = client ) for R in ires ]
 		
 		logger.debug( "| | => Transpose" )
 		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
