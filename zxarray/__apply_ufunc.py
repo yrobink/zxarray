@@ -49,7 +49,6 @@ logger.addHandler(logging.NullHandler())
 def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 					total_memory : DMUnit | str = None,
 					block_memory = None ,
-					chunks = None,
 					output_coords : dict | list | None = None ,
 					output_dims : list | tuple | None = None ,
 					output_dtypes : list | None = None ,
@@ -211,18 +210,26 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 	logger.debug( f"Block size found: {bsizes}, memory_needed: {memory_needed}" )
 	
 	## Find dimensions of chunks
-	if chunks is None:
-		chunks = [ { d : 'auto' for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
-#	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
-#	chunked_dims = []
-#	for c in chunks:
-#		chunked_dims = chunked_dims + list(c)
-#	chunked_dims = set(chunked_dims)
-#	w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
-#	chunks = [ { d : int(max( 1 , Z[d].size // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
-	
-	if not len(chunks) == len(args):
-		raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
+	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+	if kwargs.get("chunks") is not None:
+		logger.debug( "Use user chunks" )
+		user_chunks = kwargs.get("chunks")
+		for i in range(len(chunks)):
+			for d in chunks[i]:
+				if d in user_chunks:
+					chunks[i][d] = user_chunks[d]
+	else:
+		logger.debug( "Infer chunk" )
+		user_chunks = kwargs.get("chunks")
+		chunked_dims = []
+		for c in chunks:
+			chunked_dims = chunked_dims + list(c)
+		chunked_dims = set(chunked_dims)
+		w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
+		chunks = [ { d : int(max( 1 , Z[d].size // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+		
+		if not len(chunks) == len(args):
+			raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
 	logger.debug( f"Chunk dimensions: {chunks}" )
 	
 	## Create the cluster / client
@@ -265,17 +272,20 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		logger.debug( "| | => Create apply" )
 		ires = xr.apply_ufunc( func , *xargs , **dask_kwargs )
 		
-		## Compute and transpose
+		## Transform in list, and in dataset
 		if isinstance(ires,xr.DataArray):
 			ires = [ires]
 		else:
 			ires = list(ires)
-		logger.debug( "| | => Compute" )
-		ores = dask.compute( *ires , scheduler = client )
-#		ores = [ R.compute( scheduler = client ) for R in ires ]
+		dres = xr.Dataset( { f"xarr{i}" : res for i,res in enumerate(ires) } )
 		
+		logger.debug( "| | => Compute" )
+		dres = dres.persist().compute( scheduler = client )
+#		ores = [ R.compute( scheduler = client ) for R in ires ]
+#		
 		logger.debug( "| | => Transpose" )
-		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
+#		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
+		ores = [ dres[f"xarr{i}"].transpose(*Z.dims) for i,Z in enumerate(zout) ]
 		
 		## And save
 		logger.debug( "| | => From memory to disk" )
@@ -292,6 +302,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		gc.collect()
 	
 	if manage_client:
+		cluster.close()
 		client.shutdown()
 		client.close()
 	
