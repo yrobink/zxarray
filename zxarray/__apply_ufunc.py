@@ -209,6 +209,15 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		raise MemoryError( f"Insufficient memory, maximal memory lower than memory needed: total_memory = {total_memory} < {memory_needed} = memory_needed" )
 	logger.debug( f"Block size found: {bsizes}, memory_needed: {memory_needed}" )
 	
+	## Size of all dimensions
+	size_alldims = {}
+	for Z in args:
+		for d in Z.dims:
+			size_alldims[d] = Z[d].size
+			if d in block_dims:
+				size_alldims[d] = bsizes[block_dims.index(d)]
+	logger.debug( f"Size of all dimensions: {size_alldims}" )
+	
 	## Find dimensions of chunks
 	chunks = [ { d : 1 for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
 	if kwargs.get("chunks") is not None:
@@ -225,8 +234,8 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		for c in chunks:
 			chunked_dims = chunked_dims + list(c)
 		chunked_dims = set(chunked_dims)
-		w_ratio = max( 1 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
-		chunks = [ { d : int(max( 1 , Z[d].size // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
+		w_ratio = max( 2 , int(np.ceil( np.power( n_workers , 1 / len(chunked_dims) )  )) )
+		chunks = [ { d : int(max( 1 , size_alldims[d] // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
 		
 		if not len(chunks) == len(args):
 			raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
@@ -266,7 +275,6 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		## Extract array
 		logger.debug( "| | => From disk to memory" )
 		xargs = [ Z.isel( drop = False , **{ **{ d : slice(None) for d in Z.dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in Z.dims } } ).chunk(chunk) for Z,chunk in zip(args,chunks) ]
-		logger.debug(xargs)
 		
 		## Apply
 		logger.debug( "| | => Create apply" )
