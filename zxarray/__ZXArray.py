@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024 Yoann Robin
+## Copyright(c) 2024, 2025 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -166,6 +166,72 @@ class ZXArrayCoords:##{{{
 		if key not in self._dims:
 			raise ValueError( f"dimension '{key}' not found" )
 		return self._coords[key].copy()
+	##}}}
+	
+	def rename( self , *args , **kwargs ):##{{{
+		
+		## Merge args and kwargs
+		mname = kwargs
+		if len(args) > 0:
+			for arg in args:
+				if not isinstance(arg,dict):
+					raise ValueError("args must be a tuple of dict wich map old name to new name")
+				mname = { **mname , **arg }
+		
+		## Check the key
+		for key in mname:
+			if key not in self._dims:
+				raise ValueError(f"Invalid dimension name: '{key}'")
+		
+		## Add the current key
+		new_dims = []
+		for d in self._dims:
+			if d not in mname:
+				mname[d] = d
+				new_dims.append(d)
+			else:
+				new_dims.append(mname[d])
+		new_dims = tuple(new_dims)
+		
+		## Create the new coordinates
+		new_coords = {}
+		for ok,nk in zip(self._dims,new_dims):
+			new_coords[nk] = xr.DataArray( self._coords[ok].values , dims = [nk] , coords = [self._coords[ok].values] )
+		
+		## And set
+		self._coords = new_coords
+		self._dims   = new_dims
+		self._shape  = tuple(list([len(new_coords[d]) for d in new_dims]))
+	##}}}
+	
+	def assign_coords( self , *args , **kwargs ):##{{{
+		
+		## Merge args and kwargs
+		mname = kwargs
+		if len(args) > 0:
+			for arg in args:
+				if not isinstance(arg,dict):
+					raise ValueError("args must be a tuple of dict wich map dim to new coordinates")
+				mname = { **mname , **arg }
+		
+		## Check the key
+		for key in mname:
+			if key not in self._dims:
+				raise ValueError(f"Invalid dimension name: '{key}'")
+		
+		## Create the new coordinates
+		new_coords = {}
+		for key in self._dims:
+			if key in mname:
+				c = mname[key]
+				if not isinstance(c,xr.DataArray):
+					c = xr.DataArray( c , dims = [key] , coords = [c] )
+				new_coords[key] = c.copy()
+			else:
+				new_coords[key] = self._coords[key].copy()
+		
+		## And set
+		self._coords = new_coords
 	##}}}
 	
 	## Properties ##{{{
@@ -552,6 +618,18 @@ class ZXArray:##{{{
 		out = "\n".join( ["<zxarray.ZXArray> (" + ", ".join( f"{d}: {s}" for d,s in zip(self.dims,self.shape) ) + ")" , str(self.zinfo)[:-1] , str(self.coords)] )
 		return out
 	##}}}
+	
+	##}}}
+	
+	## Others methods ##{{{
+	
+	def rename( self , *args , **kwargs ):
+		self._internal.coords.rename(*args,**kwargs)
+		return self
+	
+	def assign_coords( self , *args , **kwargs ):
+		self._internal.coords.assign_coords(*args,**kwargs)
+		return self
 	
 	##}}}
 	

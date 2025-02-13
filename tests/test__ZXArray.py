@@ -107,6 +107,28 @@ class Test__ZXArray(unittest.TestCase):##{{{
 		
 	##}}}
 	
+	def test__rename(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		zX = zX.rename( { 'y' : "lat" } , x = 'lon' )
+		self.assertTrue( "lat" in zX.dims )
+		self.assertTrue( "lon" in zX.dims )
+		self.assertFalse( "x" in zX.dims )
+		self.assertFalse( "y" in zX.dims )
+	##}}}
+	
+	def test__assign_coords(self):##{{{
+		dims,_,coords,shape = build_coords()
+		
+		xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+		zX = zr.ZXArray.from_xarray(xX)
+		zX = zX.assign_coords( { "y" : np.arange(coords['y'].size) } , x = np.arange(coords['x'].size) )
+		for d in ["y","x"]:
+			self.assertAlmostEqual( np.sqrt( np.sum(np.abs(zX[d] - np.arange(coords[d].size))**2) ) , 0. )
+	##}}}
+	
 	def test__copy(self):##{{{
 		
 		dims,_,coords,shape = build_coords()

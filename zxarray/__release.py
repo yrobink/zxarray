@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024 Yoann Robin
+## Copyright(c) 2024, 2025 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -17,8 +17,8 @@
 ## along with zxarray.  If not, see <https://www.gnu.org/licenses/>.
 
 version_major = 0
-version_minor = 9
-version_patch = 2
+version_minor = 10
+version_patch = 0
 version_extra = ""
 version      = f"{version_major}.{version_minor}.{version_patch}{version_extra}"
 
