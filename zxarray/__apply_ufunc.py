@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024 Yoann Robin
+## Copyright(c) 2024, 2025 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -285,22 +285,21 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 			ires = [ires]
 		else:
 			ires = list(ires)
-		dres = xr.Dataset( { f"xarr{i}" : res for i,res in enumerate(ires) } )
+		ores = xr.Dataset( { f"xarr{i}" : res for i,res in enumerate(ires) } )
+		
+		logger.debug( "| | => Transpose" )
+		for i,Z in enumerate(zout):
+			ores[f"xarr{i}"] = ores[f"xarr{i}"].transpose(*Z.dims)
 		
 		logger.debug( "| | => Compute" )
-		dres = dres.persist().compute( scheduler = client )
-#		ores = [ R.compute( scheduler = client ) for R in ires ]
-#		
-		logger.debug( "| | => Transpose" )
-#		ores = [ R.transpose(*Z.dims) for R,Z in zip(ores,zout) ]
-		ores = [ dres[f"xarr{i}"].transpose(*Z.dims) for i,Z in enumerate(zout) ]
+		ores = ores.persist().compute( scheduler = client )
 		
 		## And save
 		logger.debug( "| | => From memory to disk" )
 		for i in range(n_out):
 			xrcoords = { **{ d : slice(None) for d in zout[i].dims if d not in block_dims } , **{ d : bidx[d] for d in block_dims if d in zout[i].dims } }
 			zidx     = [ xrcoords[d] for d in zout[i].dims ]
-			zout[i][*zidx] = ores[i].values
+			zout[i][*zidx] = ores[f"xarr{i}"].values
 		
 		## Clean memory
 		logger.debug( "| | => Clean memory" )
