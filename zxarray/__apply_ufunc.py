@@ -278,14 +278,14 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		
 		## Apply
 		logger.debug( "| | => Create apply" )
-		ires = xr.apply_ufunc( func , *xargs , **dask_kwargs )
+		ores = xr.apply_ufunc( func , *xargs , **dask_kwargs )
 		
 		## Transform in list, and in dataset
-		if isinstance(ires,xr.DataArray):
-			ires = [ires]
+		if isinstance(ores,xr.DataArray):
+			ores = [ores]
 		else:
-			ires = list(ires)
-		ores = xr.Dataset( { f"xarr{i}" : res for i,res in enumerate(ires) } )
+			ores = list(ores)
+		ores = xr.Dataset( { f"xarr{i}" : res for i,res in enumerate(ores) } )
 		
 		logger.debug( "| | => Transpose" )
 		for i,Z in enumerate(zout):
@@ -293,6 +293,11 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 		
 		logger.debug( "| | => Compute" )
 		ores = ores.persist().compute( scheduler = client )
+		
+		## Clean memory
+		logger.debug( "| | => Clean memory of input" )
+		del xargs
+		gc.collect()
 		
 		## And save
 		logger.debug( "| | => From memory to disk" )
@@ -302,9 +307,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 			zout[i][*zidx] = ores[f"xarr{i}"].values
 		
 		## Clean memory
-		logger.debug( "| | => Clean memory" )
-		del xargs
-		del ires
+		logger.debug( "| | => Clean memory of output" )
 		del ores
 		gc.collect()
 	
