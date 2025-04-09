@@ -272,10 +272,16 @@ class ZXArrayCoords:##{{{
 ## Attributes class
 
 ## dataclass.ZXArrayAttributes ##{{{
+
+if zarr.__version__ < '3.0.0':
+	ZarrArrayClass = zarr.core.Array
+else:
+	ZarrArrayClass = zarr.Array
+
 @dataclass
 class ZXArrayAttributes:
-	coords : ZXArrayCoords   | None = None
-	zdata  : zarr.core.Array | None = None
+	coords : ZXArrayCoords  | None = None
+	zdata  : ZarrArrayClass | None = None
 ##}}}
 
 
