@@ -22,7 +22,7 @@ pip install zxarray
 
 ## License
 
-Copyright(c) 2024 Yoann Robin
+Copyright(c) 2024, 2025 Yoann Robin
 
 This file is part of zxarray.
 

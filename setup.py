@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024 Yoann Robin
+## Copyright(c) 2024, 2025 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -16,17 +16,39 @@
 ## You should have received a copy of the GNU General Public License
 ## along with zxarray.  If not, see <https://www.gnu.org/licenses/>.
 
+###############
+## Libraries ##
+###############
 
-## Start by import release details
-import os
+import setuptools
+from setuptools import setup
+from pathlib import Path
 
-cpath = os.path.dirname(os.path.abspath(__file__)) ## current-path
-with open( os.path.join( cpath , "zxarray" , "__release.py" ) , "r" ) as f:
-    lines = f.readlines()
-exec("".join(lines))
+
+############################
+## Python path resolution ##
+############################
+
+cpath = Path(__file__).parent
+
+
+########################
+## Infos from release ##
+########################
+
+list_packages = setuptools.find_packages()
+package_dir = { "zxarray" : "zxarray" }
+release = {}
+exec( (cpath / "zxarray" / "__release.py").read_text() , {} , release )
+
+
+#################
+## Description ##
+#################
+long_description = (cpath / "README.md").read_text()
+
 
 ## Required elements
-package_dir = { "zxarray" : "zxarray" }
 requires    = [
                "numpy",
                "xarray",
@@ -36,26 +58,36 @@ requires    = [
               ]
 keywords    = []
 platforms   = ["linux","macosx"]
-packages    = [
-    "zxarray",
-    ]
 
-## Now the setup
-from distutils.core import setup
 
-setup(  name             = name,
-        version          = version,
-        description      = description,
-        long_description = long_description,
-        author           = author,
-        author_email     = author_email,
-        url              = src_url,
-        packages         = packages,
-        package_dir      = package_dir,
-        requires         = requires,
-        license          = license,
-        keywords         = keywords,
-        platforms        = platforms,
+#######################
+## And now the setup ##
+#######################
+
+setup(  name         = release['name'],
+	version          = release['version'],
+	description      = release['description'],
+	long_description = long_description,
+	author           = release['author'],
+	author_email     = release['author_email'],
+	url              = release['src_url'],
+	packages         = list_packages,
+	package_dir      = package_dir,
+	requires         = requires,
+	license          = release['license'],
+	keywords         = keywords,
+	platforms        = platforms,
+	classifiers      = [
+		"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+		"Natural Language :: English",
+		"Operating System :: MacOS :: MacOS X",
+		"Operating System :: POSIX :: Linux",
+		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3.11",
+		"Programming Language :: Python :: 3.12",
+		"Programming Language :: Python :: 3.13",
+		"Topic :: Scientific/Engineering :: Mathematics"
+	],
 		include_package_data = True
     )
 
