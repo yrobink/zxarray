@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024 Yoann Robin
+## Copyright(c) 2024, 2025 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -31,7 +31,6 @@ from .__sys      import random_zfile
 from .__zxParams import zxParams
 from .__ZXArray  import ZXArray
 from .__apply_ufunc import apply_ufunc
-from .__map_ufunc import map_ufunc
 
 ## Documentation
 ################
