@@ -290,7 +290,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
 			ores[f"xarr{i}"] = ores[f"xarr{i}"].transpose(*Z.dims)
 		
 		logger.debug( "| | => Compute" )
-		ores = ores.persist().compute( scheduler = client )
+		ores = ores.persist().compute()
 		
 		## Clean memory
 		logger.debug( "| | => Clean memory of input" )
