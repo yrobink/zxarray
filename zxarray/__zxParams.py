@@ -29,33 +29,33 @@ import tempfile
 #############
 
 class ZxParams:##{{{
-	
-	## I/O ##{{{
-	
-	def __init__(self):
-		self._tmp_folder_gen = tempfile.TemporaryDirectory()
-		self._tmp_folder     = self._tmp_folder_gen.name
-	
-	def __repr__(self):
-		raise NotImplementedError
-	
-	def __str__(self):
-		raise NotImplementedError
-	
-	##}}}
-	
-	## Properties ##{{{
-	
-	@property
-	def tmp_folder(self):
-		return self._tmp_folder
-	
-	@tmp_folder.setter
-	def tmp_folder( self , path ):
-		self._tmp_folder_gen = tempfile.TemporaryDirectory( dir = os.path.abspath(path) )
-		self._tmp_folder     = self._tmp_folder_gen.name
-	##}}}
-	
+    
+    ## I/O ##{{{
+    
+    def __init__(self):
+        self._tmp_folder_gen = tempfile.TemporaryDirectory()
+        self._tmp_folder     = self._tmp_folder_gen.name
+    
+    def __repr__(self):
+        raise NotImplementedError
+    
+    def __str__(self):
+        raise NotImplementedError
+    
+    ##}}}
+    
+    ## Properties ##{{{
+    
+    @property
+    def tmp_folder(self):
+        return self._tmp_folder
+    
+    @tmp_folder.setter
+    def tmp_folder( self , path ):
+        self._tmp_folder_gen = tempfile.TemporaryDirectory( dir = os.path.abspath(path) )
+        self._tmp_folder     = self._tmp_folder_gen.name
+    ##}}}
+    
 ##}}}
 
 zxParams = ZxParams()

@@ -35,28 +35,28 @@ import zxarray as zr
 ###########
 
 class Test__misc(unittest.TestCase):
-	
-	def test_random_zfile_invalidPath(self): ##{{{
-		
-		## Build an invalid path
-		dir = "."
-		while os.path.exists(dir):
-			dir = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
-		
-		## And test if an exception is raised
-		self.assertRaises( NotADirectoryError , zr.random_zfile , dir = dir )
-	##}}}
-	
-	def test_random_zfile_validZfile(self): ##{{{
-		zfile = zr.random_zfile()
-		self.assertFalse( os.path.exists(zfile) )
-		self.assertTrue( os.path.exists(os.path.dirname(zfile)) )
-	##}}}
-	
+    
+    def test_random_zfile_invalidPath(self): ##{{{
+        
+        ## Build an invalid path
+        dir = "."
+        while os.path.exists(dir):
+            dir = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30))
+        
+        ## And test if an exception is raised
+        self.assertRaises( NotADirectoryError , zr.random_zfile , dir = dir )
+    ##}}}
+    
+    def test_random_zfile_validZfile(self): ##{{{
+        zfile = zr.random_zfile()
+        self.assertFalse( os.path.exists(zfile) )
+        self.assertTrue( os.path.exists(os.path.dirname(zfile)) )
+    ##}}}
+    
 
 ##########
 ## main ##
 ##########
 
 if __name__ == "__main__":
-	unittest.main()
+    unittest.main()

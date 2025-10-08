@@ -52,7 +52,7 @@ long_description = (cpath / "README.md").read_text()
 requires    = [
                "numpy",
                "xarray",
-               "zarr",
+               "zarr(>=3.1.0)",
                "netCDF4",
                "cftime"
               ]
@@ -65,31 +65,31 @@ platforms   = ["linux","macosx"]
 #######################
 
 setup(  name         = release['name'],
-	version          = release['version'],
-	description      = release['description'],
-	long_description = long_description,
-	long_description_content_type = 'text/markdown',
-	author           = release['author'],
-	author_email     = release['author_email'],
-	url              = release['src_url'],
-	packages         = list_packages,
-	package_dir      = package_dir,
-	requires         = requires,
-	license          = release['license'],
-	keywords         = keywords,
-	platforms        = platforms,
-	classifiers      = [
-		"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-		"Natural Language :: English",
-		"Operating System :: MacOS :: MacOS X",
-		"Operating System :: POSIX :: Linux",
-		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3.11",
-		"Programming Language :: Python :: 3.12",
-		"Programming Language :: Python :: 3.13",
-		"Topic :: Scientific/Engineering :: Mathematics"
-	],
-		include_package_data = True
+    version          = release['version'],
+    description      = release['description'],
+    long_description = long_description,
+    long_description_content_type = 'text/markdown',
+    author           = release['author'],
+    author_email     = release['author_email'],
+    url              = release['src_url'],
+    packages         = list_packages,
+    package_dir      = package_dir,
+    requires         = requires,
+    license          = release['license'],
+    keywords         = keywords,
+    platforms        = platforms,
+    classifiers      = [
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Natural Language :: English",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Topic :: Scientific/Engineering :: Mathematics"
+    ],
+        include_package_data = True
     )
 
 

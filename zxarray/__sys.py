@@ -29,34 +29,34 @@ import random
 ###############
 
 def random_zfile( prefix = "ZXARRAY_RANDOM_NAME_" , dir = "." ):##{{{
-	
-	"""
-	zxarray.random_zfile
-	====================
-	Return a random zarr file name prefixed by 'prefix' in the directory 'dir'.
-	
-	Arguments
-	---------
-	prefix: str
-		The prefix of the file name. Default is 'ZXARRAY_RANDOM_NAME_'.
-	dir: str | path
-		Directory of the file.
-	
-	Return
-	------
-	zfile: str
-		A path to a non-existing file.
-	
-	"""
-	
-	if not os.path.exists(dir):
-		raise NotADirectoryError( f"The directory {dir} does not exists" )
-	
-	zfile = os.path.join( dir , prefix + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30)) + ".zarr" )
-	while os.path.exists(zfile):
-		zfile = os.path.join( dir , prefix + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30)) + ".zarr" )
-	
-	return zfile
+    
+    """
+    zxarray.random_zfile
+    ====================
+    Return a random zarr file name prefixed by 'prefix' in the directory 'dir'.
+    
+    Arguments
+    ---------
+    prefix: str
+        The prefix of the file name. Default is 'ZXARRAY_RANDOM_NAME_'.
+    dir: str | path
+        Directory of the file.
+    
+    Return
+    ------
+    zfile: str
+        A path to a non-existing file.
+    
+    """
+    
+    if not os.path.exists(dir):
+        raise NotADirectoryError( f"The directory {dir} does not exists" )
+    
+    zfile = os.path.join( dir , prefix + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30)) + ".zarr" )
+    while os.path.exists(zfile):
+        zfile = os.path.join( dir , prefix + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(30)) + ".zarr" )
+    
+    return zfile
 ##}}}
 
 
