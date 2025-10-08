@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zxarray"
+dynamic = ["version"]
+dependencies = [
+  "numpy",
+  "xarray",
+  "zarr (>=3.1.0)",
+  "netCDF4",
+  "cftime"
+]
+requires-python = ">=3.10"
+authors = [
+  {name = "Yoann Robin", email = "yoann.robin.k@gmail.com"},
+]
+maintainers = [
+  {name = "Yoann Robin", email = "yoann.robin.k@gmail.com"},
+]
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Intended Audience :: Science/Research",
+]
+
