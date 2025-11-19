@@ -32,6 +32,8 @@ from .__zxParams import zxParams
 from .__ZXArray  import ZXArray
 from .__apply_ufunc import apply_ufunc
 
+from .__stats import zanomaly
+
 ## Documentation
 ################
 

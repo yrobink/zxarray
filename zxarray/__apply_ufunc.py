@@ -32,6 +32,7 @@ import distributed
 
 from .__DMUnit import DMUnit
 
+
 ##################
 ## Init logging ##
 ##################
@@ -238,7 +239,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
         chunks = [ { d : int(max( 1 , size_alldims[d] // w_ratio )) for d in Z.dims if d not in icd } for Z,icd in zip(args,dask_kwargs["input_core_dims"]) ]
         
         if not len(chunks) == len(args):
-            raise ValueError( f"Len of input_core_dims must match the numbers of input array" )
+            raise ValueError( "Len of input_core_dims must match the numbers of input array" )
     logger.debug( f"Chunk dimensions: {chunks}" )
     
     ## Create the cluster / client
@@ -251,7 +252,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
         if client is not None:
             cluster = client.cluster
         elif cluster is not None:
-            client = distributed.Client(cluster)
+            client = cluster.get_client()
     logger.debug( f"client : {client}" )
     logger.debug( f"cluster: {cluster}" )
     

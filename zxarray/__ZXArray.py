@@ -24,6 +24,7 @@ from .__zxParams import zxParams
 from dataclasses import dataclass
 
 from .__sys import random_zfile
+from .__stats import zanomaly
 
 import os
 import pathlib
@@ -32,6 +33,10 @@ import xarray as xr
 import zarr
 import netCDF4
 import cftime
+
+from typing import Sequence, Any
+
+IdxSlice = Sequence[Any]
 
 
 #############
@@ -329,23 +334,29 @@ class ZXArrayZLocator:##{{{
     def __init__( self , zxarr ):
         self._zxarr = zxarr
     
-    def __getitem__( self , args ):
+    def __getitem__( self , args: IdxSlice ):
         if not ( len(args) == self._zxarr.ndim or len(args) == self._zxarr.ndim + 1 ):
-            raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
+            raise ValueError( "ZXArray.ZXArrayLocator: Bad number arguments")
         drop = bool(args[-1]) if len(args) == self._zxarr.ndim + 1 else True
         sel  = { d : arg for d,arg in zip(self._zxarr.dims,args) }
         return self._zxarr.zsel( drop = drop , **sel )
     
-    def __setitem__( self , args , data ):
+    def __setitem__( self , args: IdxSlice , data: float | np.ndarray | xr.DataArray ):
         if not len(args) == self._zxarr.ndim:
-            raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
+            raise ValueError( "ZXArray.ZXArrayLocator: Bad number arguments")
         sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
         index,dims,coords = self._zxarr._internal.coords.coords_to_index(**sel)
         
-        data = np.asarray( data , dtype = self._zxarr.dtype )
-        if data.ndim == 0:
-            data = np.zeros( [coords[d].size for d in dims] ) + data
-        self._zxarr._internal.zdata.set_orthogonal_selection( index , data[:] )
+        if isinstance( data, ZXArray ):
+            self._zxarr._internal.zdata.set_orthogonal_selection(
+                index,
+                data._internal.zdata[:]
+            )
+        else:
+            data = np.asarray( data , dtype = self._zxarr.dtype )
+            if data.ndim == 0:
+                data = np.zeros( [coords[d].size for d in dims] ) + data
+            self._zxarr._internal.zdata.set_orthogonal_selection( index , data[:] )
 ##}}}
 
 
@@ -921,17 +932,28 @@ class ZXArray:##{{{
         Returns
         -------
         """
-        data = np.asarray( data , dtype = self.dtype )
-        if data.ndim == 0:
-            self._internal.zdata.set_orthogonal_selection( args , data )
+        
+        ## Find shape
+        shp = np.broadcast_to( 0 , self.shape )[args].shape
+        
+        if isinstance( data, ZXArray ):
+            self._internal.zdata.set_orthogonal_selection( args , data._internal.zdata[:].reshape(shp) )
         else:
-            self._internal.zdata.set_orthogonal_selection( args , data[:] )
+            data = np.asarray( data , dtype = self.dtype )
+            if data.ndim == 0:
+                self._internal.zdata.set_orthogonal_selection( args , data )
+            else:
+                self._internal.zdata.set_orthogonal_selection( args , data[:] )
     ##}}}
     
     ## }}}
     
     ## Stats ##{{{
     
+    def anomaly( self , dims = None, **kwargs ):##{{{
+        return zanomaly( self , dims = dims , **kwargs )
+    ##}}}
+
     def _ufunc( self , func , dims = None , **kwargs ):##{{{
         raise NotImplementedError
     ##}}}
