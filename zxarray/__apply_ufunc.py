@@ -173,13 +173,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
         logger.debug( "block_memory not given, infer it" )
         total_unit_block = DMUnit.zero()
         for Z in itt.chain( args , zout ):
-            try:
-                nbits = np.finfo(Z.dtype).bits
-            except:
-                try:
-                    nbits = np.iinfo(Z.dtype).bits
-                except:
-                    nbits = 64
+            nbits = DMUnit.nbitsof_dtype(Z.dtype)
             sizeZ = DMUnit( n = nbits // DMUnit.bits_per_octet , unit = 'o' )
             for d in Z.dims:
                 if d in block_dims: continue

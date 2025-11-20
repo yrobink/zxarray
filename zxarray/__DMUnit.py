@@ -79,7 +79,7 @@ class DMUnit:
     array:
     
     >>> x = np.zeros( (2,3,4) )
-    >>> size_x = zxarray.DMUnit( n = x.size * np.finfo(x.dtype).bits // zxarray.DMUnit.bits_per_octet , unit = "o" )
+    >>> size_x = zxarray.DMUnit( n = x.size * zxarray.DMUnit.nbitsof_dtype(x.dtype) // zxarray.DMUnit.bits_per_octet , unit = "o" )
     
     which is equivalent to :
     
@@ -180,6 +180,19 @@ class DMUnit:
         return DMUnit( n = 1 , unit = 'b' )
     ##}}}
     
+    ## @static.nbitsof_dtype ##{{{
+    @staticmethod
+    def nbitsof_dtype(dtype):
+        try:
+            bits = np.finfo(dtype).bits
+        except:
+            try:
+                bits = np.iinfo(dtype).bits
+            except:
+                bits = 64
+        return bits
+    ##}}}
+
     ## @static.sizeof_array ##{{{
     @staticmethod
     def sizeof_array(X):
@@ -200,13 +213,7 @@ class DMUnit:
         s: zxarray.DMUnit
             Memory size of X
         """
-        try:
-            bits = np.finfo(X).bits
-        except:
-            try:
-                bits = np.iinfo(X).bits
-            except:
-                bits = 64
+        bits = DMUnit.nbitsof_dtype(X.dtype)
         return DMUnit( n = int( X.size * (bits // DMUnit.bits_per_octet) ) , unit = "o" )
     ##}}}
     
