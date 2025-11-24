@@ -943,7 +943,7 @@ class ZXArray:##{{{
             if data.ndim == 0:
                 self._internal.zdata.set_orthogonal_selection( args , data )
             else:
-                self._internal.zdata.set_orthogonal_selection( args , data[:] )
+                self._internal.zdata.set_orthogonal_selection( args , data[:].reshape(shp) )
     ##}}}
     
     ## }}}
