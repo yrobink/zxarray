@@ -142,10 +142,15 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
     
     ## Special case, len(block_dims) == 0
     if len(block_dims) == 0:
-        xargs = [ arg.dataarray.values for arg in args ]
-        xout  = func( *xargs , **dask_kwargs.get( "kwargs" , {} ) )
-        for i in range(len(zout)):
-            zout[i]._internal.zdata[:] = xout[i][:]
+        xargs = [ arg.dataarray for arg in args ]
+        xout  = xr.apply_ufunc( func, *xargs, **dask_kwargs )
+        if isinstance(xout,xr.DataArray):
+            xout = [xout]
+        xout  = xr.Dataset( { f"res{i}": xout[i] for i in range(n_out) } ).compute()
+        for i in range(n_out):
+            zout[i]._internal.zdata[:] = xout[f"res{i}"].transpose(*zout[i].dims).values[:]
+        if n_out == 1:
+            return zout[i]
         return zout
     
     ## Find block coords
