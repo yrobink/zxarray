@@ -345,8 +345,7 @@ class ZXArrayZLocator:##{{{
         if not len(args) == self._zxarr.ndim:
             raise ValueError( "ZXArray.ZXArrayLocator: Bad number arguments")
         sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
-        index,dims,coords = self._zxarr._internal.coords.coords_to_index(**sel)
-        
+        index,dims,coords = self._zxarr._internal.coords.coords_to_index( **sel, drop = False )
         if isinstance( data, ZXArray ):
             self._zxarr._internal.zdata.set_orthogonal_selection(
                 index,
