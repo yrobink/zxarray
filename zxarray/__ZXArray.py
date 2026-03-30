@@ -607,7 +607,7 @@ class ZXArray:##{{{
         raise NotImplementedError
     ##}}}
     
-    def copy( self , zfile = None , zarr_kwargs = {} ): ##{{{
+    def copy( self , zfile = None , zarr_kwargs = {}, drop = False ): ##{{{
         """
         zxarray.ZXArray.copy
         ====================
@@ -625,7 +625,7 @@ class ZXArray:##{{{
         -------
         zX: zxarray.ZXArray
         """
-        return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d] for d in self.dims } )
+        return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d] for d in self.dims }, drop = drop )
     ##}}}
     
     def __repr__(self):##{{{
