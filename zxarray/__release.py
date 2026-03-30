@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024, 2025 Yoann Robin
+## Copyright(c) 2024 / 2026 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -18,7 +18,7 @@
 
 version_major = 0
 version_minor = 13
-version_patch = 4
+version_patch = 5
 version_extra = ""
 version      = f"{version_major}.{version_minor}.{version_patch}{version_extra}"
 

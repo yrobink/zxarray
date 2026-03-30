@@ -1,5 +1,5 @@
 
-## Copyright(c) 2024, 2025 Yoann Robin
+## Copyright(c) 2024 / 2026 Yoann Robin
 ## 
 ## This file is part of zxarray.
 ## 
@@ -585,7 +585,8 @@ class ZXArray:##{{{
                     coords.append( xr.DataArray( [var] , dims = [dvar] , coords = [ [var] ] ) )
                     shape.append(1)
                 
-                zX.loc[*coords] = incf.variables[var][:].reshape(shape)
+                idata = incf.variables[var][:].reshape(shape)
+                zX.loc[*coords] = np.where( ~idata.mask, idata, np.nan )
         
         return zX
     ##}}}
