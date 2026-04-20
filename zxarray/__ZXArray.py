@@ -747,7 +747,7 @@ class ZXArray:##{{{
     
     ## Data accessors ## {{{
     
-    def sel( self , drop = True , **kwargs ):##{{{
+    def sel( self , *args, drop = True , **kwargs ):##{{{
         """
         zxarray.ZXArray.sel
         ===================
@@ -756,6 +756,8 @@ class ZXArray:##{{{
         
         Arguments
         ---------
+        args:
+            Dict mapping to new coordinates
         drop: bool
             drop or not 1-dim coordinates. Default is True.
         kwargs: dict
@@ -766,12 +768,18 @@ class ZXArray:##{{{
         xX: xarray.DataArray
         """
         
-        index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **kwargs )
+        akwargs = kwargs
+        if len(args) > 0:
+            if not isinstance(args[0],dict):
+                raise ValueError( "If args is, set it must be a dict mapping coordinates" )
+            akwargs = { **kwargs, **args[0] }
+        
+        index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **akwargs )
         
         return xr.DataArray( self._internal.zdata.get_orthogonal_selection(index) , dims = dims , coords = coords )
     ##}}}
     
-    def zsel( self , drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
+    def zsel( self , *args, drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
         """
         zxarray.ZXArray.zsel
         ====================
@@ -780,6 +788,8 @@ class ZXArray:##{{{
         
         Arguments
         ---------
+        args:
+            Dict mapping to new coordinates
         drop: bool
             drop or not 1-dim coordinates. Default is True.
         zfile: str | None
@@ -797,7 +807,13 @@ class ZXArray:##{{{
         zX: zxarray.ZXArray
         """
         
-        index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **kwargs )
+        akwargs = kwargs
+        if len(args) > 0:
+            if not isinstance(args[0],dict):
+                raise ValueError( "If args is, set it must be a dict mapping coordinates" )
+            akwargs = { **kwargs, **args[0] }
+
+        index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **akwargs )
         if zchunks is None:
             zchunks = []
             for id,d in enumerate(self.dims):
@@ -810,7 +826,7 @@ class ZXArray:##{{{
         return xzarr
     ##}}}
     
-    def isel( self , drop = True , **kwargs ):##{{{
+    def isel( self , *args, drop = True , **kwargs ):##{{{
         """
         zxarray.ZXArray.isel
         ====================
@@ -819,6 +835,8 @@ class ZXArray:##{{{
         
         Arguments
         ---------
+        args:
+            Dict mapping to sub index
         drop: bool
             drop or not 1-dim coordinates. Default is True.
         kwargs: dict
@@ -828,10 +846,16 @@ class ZXArray:##{{{
         -------
         xX: xarray.DataArray
         """
-        return self.sel( drop = drop , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
+
+        akwargs = kwargs
+        if len(args) > 0:
+            if not isinstance(args[0],dict):
+                raise ValueError( "If args is, set it must be a dict mapping coordinates" )
+            akwargs = { **kwargs, **args[0] }
+        return self.sel( drop = drop , **{ d : self._internal.coords[d][akwargs[d]] for d in akwargs } )
     ##}}}
     
-    def zisel( self , drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
+    def zisel( self , *args, drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
         """
         zxarray.ZXArray.zisel
         =====================
@@ -840,6 +864,8 @@ class ZXArray:##{{{
         
         Arguments
         ---------
+        args:
+            Dict mapping to sub index
         drop: bool
             drop or not 1-dim coordinates. Default is True.
         zfile: str | None
@@ -856,7 +882,12 @@ class ZXArray:##{{{
         -------
         zX: zxarray.ZXArray
         """
-        return self.zsel( drop = drop , zfile = zfile, zchunks = zchunks, zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
+        akwargs = kwargs
+        if len(args) > 0:
+            if not isinstance(args[0],dict):
+                raise ValueError( "If args is, set it must be a dict mapping coordinates" )
+            akwargs = { **kwargs, **args[0] }
+        return self.zsel( drop = drop , zfile = zfile, zchunks = zchunks, zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][akwargs[d]] for d in akwargs } )
     ##}}}
     
     ## property.loc ##{{{

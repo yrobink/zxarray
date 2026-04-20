@@ -164,6 +164,11 @@ class Test__ZXArray(unittest.TestCase):##{{{
         szX = zX.sel( **scoords )
         
         self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+        
+        sxX = xX.sel( scoords )
+        szX = zX.sel( scoords )
+        
+        self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
     ##}}}
     
     def test__zsel(self):##{{{
@@ -176,6 +181,11 @@ class Test__ZXArray(unittest.TestCase):##{{{
         
         sxX = xX.sel( **scoords )
         szX = zX.zsel( **scoords )
+        
+        self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+        
+        sxX = xX.sel( scoords )
+        szX = zX.zsel( scoords )
         
         self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
     ##}}}
@@ -192,6 +202,11 @@ class Test__ZXArray(unittest.TestCase):##{{{
         szX = zX.isel( **sicoords )
         
         self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
+        
+        sxX = xX.isel( sicoords )
+        szX = zX.isel( sicoords )
+        
+        self.assertTrue( ( np.abs( sxX - szX ) < 1e-6 ).all() )
     ##}}}
     
     def test__zisel(self):##{{{
@@ -204,6 +219,11 @@ class Test__ZXArray(unittest.TestCase):##{{{
         
         sxX = xX.isel( **sicoords )
         szX = zX.zisel( **sicoords )
+        
+        self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
+        
+        sxX = xX.isel( sicoords )
+        szX = zX.zisel( sicoords )
         
         self.assertTrue( ( np.abs( sxX - szX.dataarray ) < 1e-6 ).all() )
     ##}}}
