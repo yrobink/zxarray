@@ -52,6 +52,7 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
                     output_dims : list | tuple | None = None ,
                     output_dtypes : list | None = None ,
                     output_zfile : list | tuple | None = None ,
+                    output_zchunks : list | tuple | None = None ,
                     dask_kwargs : dict = {} ,
                     zarr_kwargs : dict = {} ,
                     n_workers : int = 1,
@@ -91,6 +92,8 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
         List of output dtypes.
     output_zfile:
         List of output zarr files.
+    output_zchunks:
+        List of output chunks of zarr files. Default is 'auto'
     dask_kwargs:
         Arguments passed to xarray.apply_ufunc.
     zarr_kwargs:
@@ -134,10 +137,12 @@ def apply_ufunc( func , *args , block_dims : list | tuple = [] ,
         output_zfile = [ None for _ in range(n_out) ]
     if output_dtypes is None:
         output_dtypes = ["float32" for _ in range(n_out)]
-    
+    if output_zchunks is None:
+        output_zchunks = ["auto" for _ in range(n_out)]
+
     ## Create output ZXArray
     logger.debug("Create output...")
-    zout = [ ZXArray( np.nan , dims = output_dims[i] , coords = output_coords[i] , zfile = output_zfile[i] , dtype = output_dtypes[i] , zarr_kwargs = zarr_kwargs ) for i in range(n_out) ]
+    zout = [ ZXArray( np.nan , dims = output_dims[i] , coords = output_coords[i] , zfile = output_zfile[i] , dtype = output_dtypes[i] , zchunks = output_zchunks[i], zarr_kwargs = zarr_kwargs ) for i in range(n_out) ]
     logger.debug("Done")
     
     ## Special case, len(block_dims) == 0

@@ -146,7 +146,7 @@ class Test__ZXArray(unittest.TestCase):##{{{
         zchunks = (10,100,5,5)
 
         xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
-        zX = zr.ZXArray.from_xarray( xX, zarr_kwargs = { "chunks": zchunks } )
+        zX = zr.ZXArray.from_xarray( xX, zchunks = zchunks )
         zY = zX.copy()
         self.assertTrue( zX.chunks == zY.chunks )
         

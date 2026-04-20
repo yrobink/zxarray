@@ -466,7 +466,7 @@ class ZXArray:##{{{
     
     ## static.from_ncfiles ## {{{
     @staticmethod
-    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ) -> Self:
+    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32", zchunks: None | tuple[int] = None, zarr_kwargs : dict = {} ) -> Self:
         """
         zxarray.ZXArray@static.from_ncfiles
         ===================================
@@ -499,6 +499,8 @@ class ZXArray:##{{{
             zxarray.zxParams.tmp_folder
         dtype: data_type
             Data type
+        zchunks: "auto" | tuple[int]
+            zarr chunk size
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
         
@@ -564,7 +566,7 @@ class ZXArray:##{{{
         if has_vars:
             zdims = tuple(zdims) + (dvar,)
             zcoords[dvar] = xr.DataArray( lvars , dims = [dvar] , coords = [lvars] )
-        zX = ZXArray( np.nan , dims = zdims , coords = zcoords , zfile = zfile , dtype = dtype , zarr_kwargs = zarr_kwargs )
+        zX = ZXArray( np.nan , dims = zdims , coords = zcoords , zfile = zfile , dtype = dtype , zchunks = zchunks, zarr_kwargs = zarr_kwargs )
         
         ## And new loop on files to copy data
         for ifile in ifiles:
@@ -615,7 +617,7 @@ class ZXArray:##{{{
         raise NotImplementedError
     ##}}}
     
-    def copy( self , zfile: str | None = None , zarr_kwargs: dict | None = None, drop: bool = False ) -> Self: ##{{{
+    def copy( self , zfile: str | None = None , zchunks: str | tuple[int] | None = None, zarr_kwargs: dict | None = None, drop: bool = False ) -> Self: ##{{{
         """
         zxarray.ZXArray.copy
         ====================
@@ -626,6 +628,8 @@ class ZXArray:##{{{
         zfile: str | None
             Path to the zarr file for storage. Default path is given by
             zxarray.zxParams.tmp_folder
+        zchunks: str | tuple[int] | None
+            zarr chunk size, default is None, and use the original chunks
         zarr_kwargs: dict | None
             Keywords arguments given to zarr.open. If None, the kwargs of
             input ZXArray is used
@@ -639,7 +643,9 @@ class ZXArray:##{{{
         zkwargs = zarr_kwargs
         if zkwargs is None:
             zkwargs = self._internal.zkwargs
-        return self.zsel( zfile = zfile , zarr_kwargs = zkwargs , **{ d : self._internal.coords[d] for d in self.dims }, drop = drop )
+        if zchunks is None:
+            zchunks = self.chunks
+        return self.zsel( zfile = zfile, zchunks = zchunks, zarr_kwargs = zkwargs, **{ d : self._internal.coords[d] for d in self.dims }, drop = drop )
     ##}}}
     
     def __repr__(self) -> str:##{{{
@@ -652,11 +658,9 @@ class ZXArray:##{{{
     ##}}}
     
     def __del__( self ):##{{{
-        self._internal.zdata.store.clear()
-        self._internal.zdata.store.close()
         del self._internal.zdata
         zfile = self._internal.zfile
-        if os.path.isdir(zfile):
+        if zfile is not None and os.path.isdir(zfile):
             shutil.rmtree(zfile)
     ##}}}
 
@@ -767,7 +771,7 @@ class ZXArray:##{{{
         return xr.DataArray( self._internal.zdata.get_orthogonal_selection(index) , dims = dims , coords = coords )
     ##}}}
     
-    def zsel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+    def zsel( self , drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
         """
         zxarray.ZXArray.zsel
         ====================
@@ -781,6 +785,8 @@ class ZXArray:##{{{
         zfile: str | None
             Path to the zarr file for storage. Default path is given by
             zxarray.zxParams.tmp_folder
+        zchunks: str | tuple[int] | None
+            zarr chunk size, default is None, and adapt the original zchunks to new data
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
         kwargs: dict
@@ -792,7 +798,13 @@ class ZXArray:##{{{
         """
         
         index,dims,coords = self._internal.coords.coords_to_index( drop = drop , **kwargs )
-        xzarr = ZXArray( dims = dims , coords = coords , zfile = zfile , dtype = self.dtype , zarr_kwargs = zarr_kwargs )
+        if zchunks is None:
+            zchunks = []
+            for id,d in enumerate(self.dims):
+                if d in dims:
+                    zchunks.append( min(self.chunks[id],coords[d].size) )
+        
+        xzarr = ZXArray( dims = dims , coords = coords , zfile = zfile , dtype = self.dtype, zchunks = zchunks, zarr_kwargs = zarr_kwargs )
         xzarr._internal.zdata[:] = self._internal.zdata.get_orthogonal_selection(index)
         
         return xzarr
@@ -819,7 +831,7 @@ class ZXArray:##{{{
         return self.sel( drop = drop , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
     ##}}}
     
-    def zisel( self , drop = True , zfile = None , zarr_kwargs = {} , **kwargs ): ##{{{
+    def zisel( self , drop = True , zfile = None, zchunks: str | tuple[int] | None = None, zarr_kwargs = {} , **kwargs ): ##{{{
         """
         zxarray.ZXArray.zisel
         =====================
@@ -833,6 +845,8 @@ class ZXArray:##{{{
         zfile: str | None
             Path to the zarr file for storage. Default path is given by
             zxarray.zxParams.tmp_folder
+        zchunks: str | tuple[int] | None
+            zarr chunk size, default is None, and adapt the original zchunks to new data
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
         kwargs: dict
@@ -842,7 +856,7 @@ class ZXArray:##{{{
         -------
         zX: zxarray.ZXArray
         """
-        return self.zsel( drop = drop , zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
+        return self.zsel( drop = drop , zfile = zfile, zchunks = zchunks, zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d][kwargs[d]] for d in kwargs } )
     ##}}}
     
     ## property.loc ##{{{
