@@ -28,13 +28,14 @@ from .__stats import zanomaly
 
 import os
 import pathlib
+import shutil
 import numpy as np
 import xarray as xr
 import zarr
 import netCDF4
 import cftime
 
-from typing import Sequence, Any
+from typing import Sequence, Any, Self
 
 IdxSlice = Sequence[Any]
 
@@ -287,6 +288,8 @@ else:
 class ZXArrayAttributes:
     coords : ZXArrayCoords  | None = None
     zdata  : ZarrArrayClass | None = None
+    zkwargs: dict | None = None
+    zfile: str | None = None
 ##}}}
 
 
@@ -304,14 +307,14 @@ class ZXArrayLocator:##{{{
     def __init__( self , zxarr ):
         self._zxarr = zxarr
     
-    def __getitem__( self , args ):
+    def __getitem__( self , args: tuple[Any] ) -> xr.DataArray:
         if not ( len(args) == self._zxarr.ndim or len(args) == self._zxarr.ndim + 1 ):
             raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
         drop = bool(args[-1]) if len(args) == self._zxarr.ndim + 1 else True
         sel  = { d : arg for d,arg in zip(self._zxarr.dims,args) }
         return self._zxarr.sel( drop = drop , **sel )
     
-    def __setitem__( self , args , data ):
+    def __setitem__( self , args: tuple[Any] , data: float | xr.DataArray | np.ndarray ) -> None:
         if not len(args) == self._zxarr.ndim:
             raise ValueError( f"ZXArray.ZXArrayLocator: Bad number arguments")
         sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
@@ -341,7 +344,7 @@ class ZXArrayZLocator:##{{{
         sel  = { d : arg for d,arg in zip(self._zxarr.dims,args) }
         return self._zxarr.zsel( drop = drop , **sel )
     
-    def __setitem__( self , args: IdxSlice , data: float | np.ndarray | xr.DataArray ):
+    def __setitem__( self , args: IdxSlice , data: float | np.ndarray | xr.DataArray ) -> None:
         if not len(args) == self._zxarr.ndim:
             raise ValueError( "ZXArray.ZXArrayLocator: Bad number arguments")
         sel = { d : arg for d,arg in zip(self._zxarr.dims,args) }
@@ -378,7 +381,7 @@ class ZXArray:##{{{
     
     ## I/O ##{{{
     
-    def __init__( self , data = None , dims = None , coords = None , zfile = None , dtype = "float32" , zarr_kwargs = {} ): ##{{{
+    def __init__( self , data = None , dims = None , coords = None , zfile = None , dtype = "float32" , zchunks = "auto", zarr_kwargs = {} ): ##{{{
         """
         zxarray.ZXArray.__init__
         ========================
@@ -398,6 +401,8 @@ class ZXArray:##{{{
             zxarray.zxParams.tmp_folder
         dtype: data_type
             Data type
+        zchunks: "auto" | tuple[int]
+            zarr chunk size
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
         
@@ -415,7 +420,9 @@ class ZXArray:##{{{
         ## Open the zarr file
         if zfile is None:
             zfile = random_zfile( dir = zxParams.tmp_folder )
-        self._internal.zdata = zarr.create_array( zfile , shape = self._internal.coords.shape , zarr_format= 3, dtype = dtype , **zarr_kwargs )
+        self._internal.zfile   = zfile
+        self._internal.zdata   = zarr.create_array( zfile , shape = self._internal.coords.shape , zarr_format= 3, dtype = dtype, chunks = zchunks, **zarr_kwargs )
+        self._internal.zkwargs = zarr_kwargs
         
         ## Set data
         if data is not None:
@@ -432,7 +439,7 @@ class ZXArray:##{{{
     
     ## static.from_xarray ## {{{
     @staticmethod
-    def from_xarray( xX : xr.DataArray , zfile : str | None = None , zarr_kwargs : dict = {} ):
+    def from_xarray( xX : xr.DataArray , zfile : str | None = None , zchunks: str | tuple[int] = "auto", zarr_kwargs : dict = {} ) -> Self:
         """
         zxarray.ZXArray@static.from_xarray
         ==================================
@@ -445,6 +452,8 @@ class ZXArray:##{{{
         zfile: str | None
             Path to the zarr file for storage. Default path is given by
             zxarray.zxParams.tmp_folder
+        zchunks: "auto" | tuple[int]
+            zarr chunk size
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
         
@@ -452,12 +461,12 @@ class ZXArray:##{{{
         -------
         zX: zxarray.ZXArray
         """
-        return ZXArray( data = xX.values , dims = tuple(xX.dims) , coords = { d : xX[d] for d in xX.dims } , zfile = zfile , dtype = xX.dtype , zarr_kwargs = zarr_kwargs )
+        return ZXArray( data = xX.values , dims = tuple(xX.dims) , coords = { d : xX[d] for d in xX.dims } , zfile = zfile , dtype = xX.dtype , zchunks = zchunks, zarr_kwargs = zarr_kwargs )
     ##}}}
     
     ## static.from_ncfiles ## {{{
     @staticmethod
-    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ):
+    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32" , zarr_kwargs : dict = {} ) -> Self:
         """
         zxarray.ZXArray@static.from_ncfiles
         ===================================
@@ -590,7 +599,7 @@ class ZXArray:##{{{
         return zX
     ##}}}
     
-    def to_netcdf( self , ofile , name ):##{{{
+    def to_netcdf( self , ofile: str , name: str ) -> None:##{{{
         """
         zxarray.ZXArray.to_netcdf
         =========================
@@ -606,7 +615,7 @@ class ZXArray:##{{{
         raise NotImplementedError
     ##}}}
     
-    def copy( self , zfile = None , zarr_kwargs = {}, drop = False ): ##{{{
+    def copy( self , zfile: str | None = None , zarr_kwargs: dict | None = None, drop: bool = False ) -> Self: ##{{{
         """
         zxarray.ZXArray.copy
         ====================
@@ -617,34 +626,49 @@ class ZXArray:##{{{
         zfile: str | None
             Path to the zarr file for storage. Default path is given by
             zxarray.zxParams.tmp_folder
-        zarr_kwargs: dict
-            Keywords arguments given to zarr.open
+        zarr_kwargs: dict | None
+            Keywords arguments given to zarr.open. If None, the kwargs of
+            input ZXArray is used
+        drop: bool = False
+            Drop dimensions of size 1
         
         Returns
         -------
         zX: zxarray.ZXArray
         """
-        return self.zsel( zfile = zfile , zarr_kwargs = zarr_kwargs , **{ d : self._internal.coords[d] for d in self.dims }, drop = drop )
+        zkwargs = zarr_kwargs
+        if zkwargs is None:
+            zkwargs = self._internal.zkwargs
+        return self.zsel( zfile = zfile , zarr_kwargs = zkwargs , **{ d : self._internal.coords[d] for d in self.dims }, drop = drop )
     ##}}}
     
-    def __repr__(self):##{{{
+    def __repr__(self) -> str:##{{{
         return self.__str__()
     ##}}}
     
-    def __str__(self):##{{{
+    def __str__(self) -> str:##{{{
         out = "\n".join( ["<zxarray.ZXArray> (" + ", ".join( f"{d}: {s}" for d,s in zip(self.dims,self.shape) ) + ")" , str(self.zinfo)[:-1] , str(self.coords)] )
         return out
     ##}}}
     
+    def __del__( self ):##{{{
+        self._internal.zdata.store.clear()
+        self._internal.zdata.store.close()
+        del self._internal.zdata
+        zfile = self._internal.zfile
+        if os.path.isdir(zfile):
+            shutil.rmtree(zfile)
+    ##}}}
+
     ##}}}
     
     ## Others methods ##{{{
     
-    def rename( self , *args , **kwargs ):
+    def rename( self , *args , **kwargs ) -> Self:
         self._internal.coords.rename(*args,**kwargs)
         return self
     
-    def assign_coords( self , *args , **kwargs ):
+    def assign_coords( self , *args , **kwargs ) -> Self:
         self._internal.coords.assign_coords(*args,**kwargs)
         return self
     
@@ -653,9 +677,9 @@ class ZXArray:##{{{
     ## Properties ##{{{
     
     @property
-    def dims(self):
+    def dims(self) -> tuple[int]:
         """
-        Return a tuple of dimensions.
+        Return a tuple of integer describing the dimensions.
         """
         return self._internal.coords.dims
     
@@ -667,21 +691,28 @@ class ZXArray:##{{{
         return self._internal.coords
     
     @property
-    def shape(self):
+    def shape(self) -> tuple[int]:
         """
-        Return a tuple of shape.
+        Return a tuple of integer describing the shape.
         """
         return self._internal.zdata.shape
     
     @property
-    def size(self):
+    def chunks(self) -> tuple[int]:
+        """
+        Return a tuple of integer describing the chunks.
+        """
+        return self._internal.zdata.chunks
+
+    @property
+    def size(self) -> int:
         """
         Return the size.
         """
         return self._internal.zdata.size
     
     @property
-    def ndim(self):
+    def ndim(self) -> int:
         """
         Return the number of dimension.
         """

@@ -139,7 +139,19 @@ class Test__ZXArray(unittest.TestCase):##{{{
         self.assertTrue( ( np.abs( zY.dataarray - zX.dataarray ) < 1e-6 ).all() )
         
     ##}}}
-    
+ 
+    def test__copy_chunks(self):##{{{
+        
+        dims,_,coords,shape = build_coords()
+        zchunks = (10,100,5,5)
+
+        xX = xr.DataArray( np.random.normal( size = shape ) , dims = dims , coords = coords )
+        zX = zr.ZXArray.from_xarray( xX, zarr_kwargs = { "chunks": zchunks } )
+        zY = zX.copy()
+        self.assertTrue( zX.chunks == zY.chunks )
+        
+    ##}}}
+
     def test__sel(self):##{{{
         dims,_,coords,shape = build_coords()
         
