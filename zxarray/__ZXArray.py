@@ -466,7 +466,7 @@ class ZXArray:##{{{
     
     ## static.from_ncfiles ## {{{
     @staticmethod
-    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32", zchunks: None | tuple[int] = None, zarr_kwargs : dict = {} ) -> Self:
+    def from_ncfiles( *args , dims : tuple[str] | list[str] | None = None , var : str | None = None , concat_var : dict | None = None , transform_coords : dict = {} , infer_cftime : bool = True , zfile : str | None = None , dtype : str = "float32", zchunks: str | tuple[int] = 'auto', zarr_kwargs : dict = {} ) -> Self:
         """
         zxarray.ZXArray@static.from_ncfiles
         ===================================
@@ -499,7 +499,7 @@ class ZXArray:##{{{
             zxarray.zxParams.tmp_folder
         dtype: data_type
             Data type
-        zchunks: "auto" | tuple[int]
+        zchunks: str | tuple[int] = "auto"
             zarr chunk size
         zarr_kwargs: dict
             Keywords arguments given to zarr.open
